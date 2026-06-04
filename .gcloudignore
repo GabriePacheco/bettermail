@@ -1,0 +1,31 @@
+# Entornos virtuales
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Frontend de desarrollo
+frontend/
+frontend/node_modules/
+frontend/src/
+frontend/public/
+frontend/package.json
+frontend/package-lock.json
+frontend/vite.config.js
+
+# Archivos locales
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Cache
+.cache/
+.pytest_cache/
+
+# Archivos innecesarios
+*.log
+.DS_Store
+firebase-key.json
