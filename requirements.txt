@@ -6,3 +6,4 @@ firebase-admin==6.6.0
 pydantic[email]==2.10.4
 slowapi==0.1.9
 pydantic-settings==2.7.1
+pycryptodome==3.23.0

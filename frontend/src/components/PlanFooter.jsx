@@ -1,8 +1,25 @@
-import { ArrowRight, Crown, PieChart } from "lucide-react";
+import { ArrowRight, CheckCircle2, Crown, Loader2, PieChart } from "lucide-react";
 
-export default function PlanFooter({ used = 0, limit = 0, loading = false }) {
+export default function PlanFooter({
+  used = 0,
+  limit = 0,
+  loading = false,
+  plan = "trial",
+  status = "trial",
+  upgradeRequired = false,
+  checkoutLoading = false,
+  proPlan,
+  onUpgrade,
+}) {
   const percentage = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const usageText = loading ? "Cargando..." : `${used}/${limit} usados`;
+  const isPro = plan === "pro" && status === "active";
+  const proPrice = proPlan ? `$${Number(proPlan.price).toFixed(2)}` : "Pro";
+  const proSubtitle = isPro
+    ? "Plan activo"
+    : upgradeRequired
+      ? "Activar Pro"
+      : `${proPrice}/mes`;
 
   return (
     <div className="footer-grid">
@@ -13,7 +30,9 @@ export default function PlanFooter({ used = 0, limit = 0, loading = false }) {
           </div>
           <div className="plan-card-copy">
             <p className="plan-card-title">
-              <span className="plan-title-full">Uso del plan</span>
+              <span className="plan-title-full">
+                {isPro ? "Uso mensual Pro" : "Uso del trial"}
+              </span>
               <span className="plan-title-compact">Uso</span>
             </p>
             <p className="plan-card-text">{usageText}</p>
@@ -25,15 +44,24 @@ export default function PlanFooter({ used = 0, limit = 0, loading = false }) {
         </div>
       </div>
 
-      <button type="button" className="pro-card">
+      <button
+        type="button"
+        className={`pro-card ${isPro ? "pro-card-active" : ""}`}
+        disabled={loading || checkoutLoading || isPro}
+        onClick={onUpgrade}
+      >
         <div className="pro-card-icon">
-          <Crown size={16} />
+          {isPro ? <CheckCircle2 size={16} /> : <Crown size={16} />}
         </div>
         <div className="pro-card-copy">
-          <p className="pro-card-title">Hazte Pro</p>
-          <p className="pro-card-subtitle">Mas funciones</p>
+          <p className="pro-card-title">{isPro ? "BetterMail Pro" : "Hazte Pro"}</p>
+          <p className="pro-card-subtitle">{checkoutLoading ? "Abriendo..." : proSubtitle}</p>
         </div>
-        <ArrowRight size={18} className="pro-card-arrow" />
+        {checkoutLoading ? (
+          <Loader2 size={18} className="pro-card-arrow spin-icon" />
+        ) : (
+          <ArrowRight size={18} className="pro-card-arrow" />
+        )}
       </button>
 
       <div className="app-version">v1.0.10</div>

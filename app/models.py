@@ -36,6 +36,12 @@ class RewriteResponse(BaseModel):
     remaining: int
     trial_limit: int
     trial_used: int
+    plan: Optional[str] = None
+    used: Optional[int] = None
+    limit: Optional[int] = None
+    monthlyLimit: Optional[int] = None
+    monthlyUsed: Optional[int] = None
+    upgradeRequired: Optional[bool] = None
     rewritten_text: Optional[str] = None
     detected_tone: Optional[str] = None
     suggested_tone: Optional[str] = None
@@ -43,7 +49,76 @@ class RewriteResponse(BaseModel):
 
 
 class UsageStatusResponse(BaseModel):
+    allowed: Optional[bool] = None
     status: str
+    plan: Optional[str] = None
+    used: Optional[int] = None
+    limit: Optional[int] = None
     remaining: int
     trial_limit: int
     trial_used: int
+    monthlyLimit: Optional[int] = None
+    monthlyUsed: Optional[int] = None
+    upgradeRequired: Optional[bool] = None
+
+
+class PlanResponse(BaseModel):
+    id: str
+    name: str
+    price: float
+    currency: str
+    monthlyLimit: int
+    active: bool
+
+
+class CheckoutRequest(BaseModel):
+    user: OfficeUser
+    plan_id: str
+    provider: Literal["manual", "payphone_cajita"] = "manual"
+    source: Literal["outlook_addin"] = "outlook_addin"
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+    order_id: str
+    status: str
+    provider: Optional[str] = None
+    payment_unavailable_reason: Optional[str] = None
+    plan: Optional[PlanResponse] = None
+    payphone_token: Optional[str] = None
+    payphone_store_id: Optional[str] = None
+    payphone_client_transaction_id: Optional[str] = None
+    payphone_amount: Optional[int] = None
+    payphone_amount_without_tax: Optional[int] = None
+    payphone_currency: Optional[str] = None
+    payphone_reference: Optional[str] = None
+    payphone_default_method: Optional[str] = None
+
+
+class CheckoutDetailsResponse(CheckoutResponse):
+    email: EmailStr
+    source: Optional[str] = None
+
+
+class ManualActivateRequest(BaseModel):
+    email: EmailStr
+    plan_id: str
+
+
+class PayphoneConfirmRequest(BaseModel):
+    id: int
+    client_transaction_id: str
+    card_token: Optional[str] = None
+
+
+class BillingStatusRequest(BaseModel):
+    user: OfficeUser
+
+
+class BillingStatusResponse(BaseModel):
+    plan: str
+    status: str
+    subscriptionStatus: Optional[str] = None
+    monthlyLimit: int
+    monthlyUsed: int
+    currentPeriodEnd: Optional[str] = None

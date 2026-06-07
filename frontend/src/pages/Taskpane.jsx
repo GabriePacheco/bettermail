@@ -12,7 +12,12 @@ import {
   User,
 } from "lucide-react";
 
-import { getUsageStatus, rewriteEmail } from "../api/bettermailApi";
+import {
+  getPlans,
+  getPricingUrl,
+  getUsageStatus,
+  rewriteEmail,
+} from "../api/bettermailApi";
 import ActionButtons from "../components/ActionButtons";
 import EmailCard from "../components/EmailCard";
 import PlanFooter from "../components/PlanFooter";
@@ -58,13 +63,21 @@ export default function Taskpane() {
   const [actionError, setActionError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const [lastRewriteMode, setLastRewriteMode] = useState("rewrite_draft");
+  const [plans, setPlans] = useState([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [usage, setUsage] = useState({
     used: 0,
     limit: 0,
     remaining: 0,
+    plan: "trial",
     status: "loading",
+    upgradeRequired: false,
   });
   const autoRewriteTextRef = useRef("");
+  const proPlan = useMemo(
+    () => plans.find((plan) => plan.id === "pro_monthly"),
+    [plans]
+  );
 
   const canRun = useMemo(
     () => isMeaningfulText(draftText) || (isReply && isMeaningfulText(quotedText)),
@@ -120,11 +133,21 @@ export default function Taskpane() {
         setUsage(data.usage);
       }
     } catch (err) {
+      if (err.usage) {
+        setUsage(err.usage);
+      }
       setActionError(err.message || "No se pudo reescribir el correo.");
     } finally {
       setLoading(false);
     }
   }, [getRewritePayload, selectedTone, userProfile]);
+
+  const refreshUsage = useCallback(async () => {
+    if (!userProfile?.email) return;
+
+    const usageStatus = await getUsageStatus({ user: userProfile });
+    setUsage(usageStatus);
+  }, [userProfile]);
 
   useEffect(() => {
     if (!userProfile?.email) return;
@@ -150,6 +173,43 @@ export default function Taskpane() {
       cancelled = true;
     };
   }, [userProfile]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPlans = async () => {
+      try {
+        const planList = await getPlans();
+        if (!cancelled) {
+          setPlans(planList);
+        }
+      } catch {
+        if (!cancelled) {
+          setPlans([]);
+        }
+      }
+    };
+
+    loadPlans();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshUsage().catch(() => {
+        setUsage((current) => ({ ...current, status: "unavailable" }));
+      });
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refreshUsage]);
 
   useEffect(() => {
     if (!isReady || !canRun || loading || improvedText.trim()) return;
@@ -204,6 +264,34 @@ export default function Taskpane() {
     setSelectedTone(tone);
     setImprovedText("");
     autoRewriteTextRef.current = `${draftText}:${quotedText}`;
+  };
+
+  const handleUpgrade = async () => {
+    if (!userProfile?.email) {
+      setActionError("No se pudo identificar el usuario de Outlook.");
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      setActionError("");
+      setInfoMessage("");
+      const pricingUrl = getPricingUrl({
+        email: userProfile.email,
+        display_name: userProfile.display_name,
+        account_type: userProfile.account_type,
+        time_zone: userProfile.time_zone,
+      });
+
+      window.open(pricingUrl, "_blank", "noopener,noreferrer");
+      setInfoMessage("Abrimos la pagina de planes. Cuando actives Pro, vuelve a esta ventana.");
+    } catch {
+      const fallbackUrl = getPricingUrl({ checkout_status: "unavailable" });
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      setInfoMessage("Abrimos la pagina de planes. Completa el pago desde ahi.");
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   const originalHelperText = useMemo(() => {
@@ -287,6 +375,12 @@ export default function Taskpane() {
           used={usage.used}
           limit={usage.limit}
           loading={usage.status === "loading"}
+          plan={usage.plan}
+          status={usage.status}
+          upgradeRequired={usage.upgradeRequired}
+          checkoutLoading={checkoutLoading}
+          proPlan={proPlan}
+          onUpgrade={handleUpgrade}
         />
       </div>
     </main>

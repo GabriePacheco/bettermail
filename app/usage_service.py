@@ -1,58 +1,193 @@
-from fastapi import HTTPException, status
+from datetime import datetime, timezone
+
 from google.cloud import firestore as google_firestore
 from app.firebase_service import get_or_create_mailbox_user, register_usage
+
+
+def _as_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _is_future(value):
+    if not value:
+        return False
+
+    now = datetime.now(timezone.utc)
+
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value > now
+
+    return False
+
+
+def _usage_response(
+    *,
+    allowed: bool,
+    status: str,
+    plan: str,
+    used: int,
+    limit: int,
+    trial_used: int,
+    trial_limit: int,
+    monthly_used: int = 0,
+    monthly_limit: int = 0,
+    message: str | None = None,
+    user_ref=None,
+    usage_bucket: str | None = None,
+    upgrade_required: bool = False,
+):
+    return {
+        "allowed": allowed,
+        "status": status,
+        "plan": plan,
+        "used": used,
+        "limit": limit,
+        "remaining": max(limit - used, 0),
+        "trial_used": trial_used,
+        "trial_limit": trial_limit,
+        "monthlyUsed": monthly_used,
+        "monthlyLimit": monthly_limit,
+        "message": message,
+        "user_ref": user_ref,
+        "usage_bucket": usage_bucket,
+        "upgradeRequired": upgrade_required,
+    }
 
 
 def check_usage_allowed(user, trial_limit: int):
     user_ref, data = get_or_create_mailbox_user(user, trial_limit)
 
-    trial_used = int(data.get("trialUsed", 0))
-    actual_trial_limit = int(data.get("trialLimit", trial_limit))
+    trial_used = _as_int(data.get("trialUsed", 0))
+    actual_trial_limit = _as_int(data.get("trialLimit", trial_limit), trial_limit)
     user_status = data.get("status", "trial")
+    plan = data.get("plan", "trial")
+    subscription_status = data.get("subscriptionStatus")
+    monthly_used = _as_int(data.get("monthlyUsed", 0))
+    monthly_limit = _as_int(data.get("monthlyLimit", 0))
+    current_period_end = data.get("currentPeriodEnd")
 
     if user_status == "blocked":
-        return {
-            "allowed": False,
-            "status": "blocked",
-            "trial_used": trial_used,
-            "trial_limit": actual_trial_limit,
-            "remaining": 0,
-            "message": "Usuario bloqueado.",
-        }
+        return _usage_response(
+            allowed=False,
+            status="blocked",
+            plan=plan,
+            used=monthly_used if plan == "pro" else trial_used,
+            limit=monthly_limit if plan == "pro" else actual_trial_limit,
+            trial_used=trial_used,
+            trial_limit=actual_trial_limit,
+            monthly_used=monthly_used,
+            monthly_limit=monthly_limit,
+            message="Usuario bloqueado.",
+            upgrade_required=True,
+        )
+
+    if plan == "pro" and user_status == "active" and subscription_status == "active":
+        if not _is_future(current_period_end):
+            return _usage_response(
+                allowed=False,
+                status="subscription_expired",
+                plan="pro",
+                used=monthly_used,
+                limit=monthly_limit,
+                trial_used=trial_used,
+                trial_limit=actual_trial_limit,
+                monthly_used=monthly_used,
+                monthly_limit=monthly_limit,
+                message="La suscripcion Pro no esta vigente.",
+                upgrade_required=True,
+            )
+
+        if monthly_used >= monthly_limit:
+            return _usage_response(
+                allowed=False,
+                status="active",
+                plan="pro",
+                used=monthly_used,
+                limit=monthly_limit,
+                trial_used=trial_used,
+                trial_limit=actual_trial_limit,
+                monthly_used=monthly_used,
+                monthly_limit=monthly_limit,
+                message="Has usado todas tus mejoras del mes.",
+                upgrade_required=True,
+            )
+
+        return _usage_response(
+            allowed=True,
+            status="active",
+            plan="pro",
+            used=monthly_used,
+            limit=monthly_limit,
+            trial_used=trial_used,
+            trial_limit=actual_trial_limit,
+            monthly_used=monthly_used,
+            monthly_limit=monthly_limit,
+            user_ref=user_ref,
+            usage_bucket="monthly",
+        )
 
     if user_status == "trial" and trial_used >= actual_trial_limit:
-        return {
-            "allowed": False,
-            "status": "trial_expired",
-            "trial_used": trial_used,
-            "trial_limit": actual_trial_limit,
-            "remaining": 0,
-            "message": "Has usado todas tus mejoras gratuitas.",
-        }
+        return _usage_response(
+            allowed=False,
+            status="trial_expired",
+            plan="trial",
+            used=trial_used,
+            limit=actual_trial_limit,
+            trial_used=trial_used,
+            trial_limit=actual_trial_limit,
+            monthly_used=monthly_used,
+            monthly_limit=monthly_limit,
+            message="Has usado todas tus mejoras gratuitas.",
+            upgrade_required=True,
+        )
 
-    return {
-        "allowed": True,
-        "status": user_status,
-        "trial_used": trial_used,
-        "trial_limit": actual_trial_limit,
-        "remaining": actual_trial_limit - trial_used,
-        "user_ref": user_ref,
-    }
+    return _usage_response(
+        allowed=True,
+        status=user_status,
+        plan="trial",
+        used=trial_used,
+        limit=actual_trial_limit,
+        trial_used=trial_used,
+        trial_limit=actual_trial_limit,
+        monthly_used=monthly_used,
+        monthly_limit=monthly_limit,
+        user_ref=user_ref,
+        usage_bucket="trial",
+    )
 
 
 def consume_rewrite_credit(user, usage_info: dict, metadata: dict):
     user_ref = usage_info["user_ref"]
+    usage_bucket = usage_info.get("usage_bucket", "trial")
 
-    user_ref.update({
-        "trialUsed": google_firestore.Increment(1)
+    if usage_bucket == "monthly":
+        user_ref.update({
+            "monthlyUsed": google_firestore.Increment(1)
+        })
+    else:
+        user_ref.update({
+            "trialUsed": google_firestore.Increment(1)
+        })
+
+    register_usage(user.email, {
+        **metadata,
+        "plan": usage_info.get("plan", "trial"),
+        "usageBucket": usage_bucket,
     })
 
-    register_usage(user.email, metadata)
-
-    trial_used_after = usage_info["trial_used"] + 1
-    remaining_after = max(usage_info["trial_limit"] - trial_used_after, 0)
+    used_after = usage_info["used"] + 1
+    remaining_after = max(usage_info["limit"] - used_after, 0)
+    trial_used_after = usage_info["trial_used"] + (1 if usage_bucket == "trial" else 0)
+    monthly_used_after = usage_info["monthlyUsed"] + (1 if usage_bucket == "monthly" else 0)
 
     return {
-        "trial_used": trial_used_after,
+        "used": used_after,
         "remaining": remaining_after,
+        "trial_used": trial_used_after,
+        "monthlyUsed": monthly_used_after,
     }

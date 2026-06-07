@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter
@@ -8,16 +8,34 @@ from slowapi.middleware import SlowAPIMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.models import RewriteRequest, RewriteResponse, UsageStatusResponse, OfficeUser
+from app.models import (
+    BillingStatusRequest,
+    BillingStatusResponse,
+    CheckoutDetailsResponse,
+    CheckoutRequest,
+    CheckoutResponse,
+    ManualActivateRequest,
+    OfficeUser,
+    PayphoneConfirmRequest,
+    PlanResponse,
+    RewriteRequest,
+    RewriteResponse,
+    UsageStatusResponse,
+)
 from app.security import verify_app_secret
 from app.usage_service import check_usage_allowed, consume_rewrite_credit
 from app.openai_service import rewrite_email_text
+from app.billing_service import (
+    activate_manual_subscription,
+    confirm_payphone_subscription,
+    create_checkout_order,
+    get_billing_status,
+    get_checkout_order,
+)
+from app.plans_service import list_plans
 
 import socket
 import os
-
-from fastapi import Depends
-from app.security import verify_app_secret
 
 settings = get_settings()
 
@@ -87,6 +105,15 @@ def health():
     return {"status": "ok", "service": "BetterMail AI API"}
 
 
+@app.get(
+    "/plans",
+    response_model=list[PlanResponse],
+    dependencies=[Depends(verify_app_secret)],
+)
+def plans():
+    return list_plans()
+
+
 @app.post(
     "/usage/status",
     response_model=UsageStatusResponse,
@@ -97,11 +124,93 @@ def usage_status(request: Request, user: OfficeUser):
     usage = check_usage_allowed(user, settings.trial_limit)
 
     return {
+        "allowed": usage["allowed"],
         "status": usage["status"],
+        "plan": usage["plan"],
+        "used": usage["used"],
+        "limit": usage["limit"],
         "remaining": usage["remaining"],
         "trial_limit": usage["trial_limit"],
         "trial_used": usage["trial_used"],
+        "monthlyLimit": usage["monthlyLimit"],
+        "monthlyUsed": usage["monthlyUsed"],
+        "upgradeRequired": usage["upgradeRequired"],
     }
+
+
+@app.post(
+    "/billing/checkout",
+    response_model=CheckoutResponse,
+    dependencies=[Depends(verify_app_secret)],
+)
+@limiter.limit("10/minute")
+def billing_checkout(request: Request, payload: CheckoutRequest):
+    return create_checkout_order(
+        user=payload.user,
+        plan_id=payload.plan_id,
+        provider=payload.provider,
+        source=payload.source,
+    )
+
+
+@app.post(
+    "/billing/manual-activate",
+    response_model=BillingStatusResponse,
+    dependencies=[Depends(verify_app_secret)],
+)
+@limiter.limit("10/minute")
+def billing_manual_activate(request: Request, payload: ManualActivateRequest):
+    return activate_manual_subscription(
+        email=str(payload.email),
+        plan_id=payload.plan_id,
+        trial_limit=settings.trial_limit,
+    )
+
+
+@app.get(
+    "/billing/checkout/{order_id}",
+    response_model=CheckoutDetailsResponse,
+    dependencies=[Depends(verify_app_secret)],
+)
+@limiter.limit("30/minute")
+def billing_checkout_details(request: Request, order_id: str):
+    return get_checkout_order(order_id)
+
+
+@app.post(
+    "/billing/payphone/confirm",
+    response_model=BillingStatusResponse,
+    dependencies=[Depends(verify_app_secret)],
+)
+@limiter.limit("20/minute")
+def billing_payphone_confirm(request: Request, payload: PayphoneConfirmRequest):
+    return confirm_payphone_subscription(
+        transaction_id=payload.id,
+        client_transaction_id=payload.client_transaction_id,
+        card_token=payload.card_token,
+        trial_limit=settings.trial_limit,
+    )
+
+
+@app.post(
+    "/billing/status",
+    response_model=BillingStatusResponse,
+    dependencies=[Depends(verify_app_secret)],
+)
+@limiter.limit("30/minute")
+def billing_status(request: Request, payload: BillingStatusRequest):
+    return get_billing_status(payload.user, settings.trial_limit)
+
+
+@app.get(
+    "/billing/status",
+    response_model=BillingStatusResponse,
+    dependencies=[Depends(verify_app_secret)],
+)
+@limiter.limit("30/minute")
+def billing_status_by_email(request: Request, email: str = Query(...)):
+    user = OfficeUser(email=email)
+    return get_billing_status(user, settings.trial_limit)
 
 
 @app.post(
@@ -117,9 +226,15 @@ def rewrite(request: Request, payload: RewriteRequest):
         return {
             "allowed": False,
             "status": usage["status"],
+            "plan": usage["plan"],
+            "used": usage["used"],
+            "limit": usage["limit"],
             "remaining": usage["remaining"],
             "trial_limit": usage["trial_limit"],
             "trial_used": usage["trial_used"],
+            "monthlyLimit": usage["monthlyLimit"],
+            "monthlyUsed": usage["monthlyUsed"],
+            "upgradeRequired": usage["upgradeRequired"],
             "message": usage["message"],
             "rewritten_text": None,
         }
@@ -149,9 +264,15 @@ def rewrite(request: Request, payload: RewriteRequest):
     return {
         "allowed": True,
         "status": usage["status"],
+        "plan": usage["plan"],
+        "used": usage_after["used"],
+        "limit": usage["limit"],
         "remaining": usage_after["remaining"],
         "trial_limit": usage["trial_limit"],
         "trial_used": usage_after["trial_used"],
+        "monthlyLimit": usage["monthlyLimit"],
+        "monthlyUsed": usage_after["monthlyUsed"],
+        "upgradeRequired": False,
         "rewritten_text": rewritten_text,
         "detected_tone": None,
         "suggested_tone": payload.tone,
