@@ -73,3 +73,21 @@ export function cancelAdminUser({ secret, email, reason }) {
 export function expireAdminUser({ secret, email, reason }) {
   return adminRequest("/billing/admin/expire", { secret, email, reason });
 }
+
+export async function getOpenAICosts({ secret, days = 30 }) {
+  const response = await fetch(
+    `${requireApiBaseUrl()}/billing/admin/openai-costs?days=${days}`,
+    {
+      headers: { "X-Admin-Secret": secret },
+    },
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Clave administrativa incorrecta.");
+    }
+    throw new Error("No se pudo consultar el costo de OpenAI.");
+  }
+
+  return response.json();
+}

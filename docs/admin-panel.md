@@ -49,5 +49,10 @@ If the local Google Cloud CLI cannot validate the corporate certificate, the hel
 - `POST /billing/admin/unblock`
 - `POST /billing/admin/cancel`
 - `POST /billing/admin/expire`
+- `GET /billing/admin/openai-costs?days=30`
 
 All routes require the `X-Admin-Secret` header and are rate limited.
+
+## OpenAI operating cost
+
+The page shows aggregated OpenAI token consumption and estimated USD cost for the last 30 days. It never exposes email content or individual user data. See `docs/medicion-costos-openai.md` for pricing configuration and reconciliation guidance.

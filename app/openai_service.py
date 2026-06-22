@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from openai import OpenAI
 from app.config import get_settings
 
@@ -12,6 +14,37 @@ TONE_MAP = {
     "institucional": "formal, institucional, sobrio y preciso",
     "reclamo_formal": "formal, firme, claro y orientado a dejar constancia sin perder profesionalismo",
 }
+
+
+@dataclass(frozen=True)
+class RewriteResult:
+    text: str
+    model: str
+    prompt_tokens: int
+    cached_prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+    pricing_label: str
+
+
+def calculate_openai_cost(
+    *,
+    prompt_tokens: int,
+    cached_prompt_tokens: int,
+    completion_tokens: int,
+    input_cost_per_1m_usd: float,
+    cached_input_cost_per_1m_usd: float,
+    output_cost_per_1m_usd: float,
+) -> float:
+    cached_tokens = max(min(cached_prompt_tokens, prompt_tokens), 0)
+    uncached_tokens = max(prompt_tokens - cached_tokens, 0)
+    cost = (
+        uncached_tokens * input_cost_per_1m_usd
+        + cached_tokens * cached_input_cost_per_1m_usd
+        + max(completion_tokens, 0) * output_cost_per_1m_usd
+    ) / 1_000_000
+    return round(cost, 8)
 
 
 def get_client():
@@ -115,4 +148,28 @@ def rewrite_email_text(
     if not rewritten_text:
         raise ValueError("OpenAI no devolvio contenido.")
 
-    return rewritten_text.strip()
+    usage = response.usage
+    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+    completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+    total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
+    prompt_details = getattr(usage, "prompt_tokens_details", None)
+    cached_prompt_tokens = int(getattr(prompt_details, "cached_tokens", 0) or 0)
+    estimated_cost_usd = calculate_openai_cost(
+        prompt_tokens=prompt_tokens,
+        cached_prompt_tokens=cached_prompt_tokens,
+        completion_tokens=completion_tokens,
+        input_cost_per_1m_usd=settings.openai_input_cost_per_1m_usd,
+        cached_input_cost_per_1m_usd=settings.openai_cached_input_cost_per_1m_usd,
+        output_cost_per_1m_usd=settings.openai_output_cost_per_1m_usd,
+    )
+
+    return RewriteResult(
+        text=rewritten_text.strip(),
+        model=getattr(response, "model", None) or settings.model_name,
+        prompt_tokens=prompt_tokens,
+        cached_prompt_tokens=cached_prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        estimated_cost_usd=estimated_cost_usd,
+        pricing_label=settings.openai_pricing_label,
+    )

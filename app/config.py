@@ -9,6 +9,18 @@ class Settings(BaseSettings):
     allowed_origins: str = Field("", alias="ALLOWED_ORIGINS")
     trial_limit: int = Field(10, alias="TRIAL_LIMIT")
     model_name: str = Field("gpt-4.1-mini", alias="MODEL_NAME")
+    openai_input_cost_per_1m_usd: float = Field(
+        0.40, alias="OPENAI_INPUT_COST_PER_1M_USD"
+    )
+    openai_cached_input_cost_per_1m_usd: float = Field(
+        0.10, alias="OPENAI_CACHED_INPUT_COST_PER_1M_USD"
+    )
+    openai_output_cost_per_1m_usd: float = Field(
+        1.60, alias="OPENAI_OUTPUT_COST_PER_1M_USD"
+    )
+    openai_pricing_label: str = Field(
+        "gpt-4.1-mini-2026-06", alias="OPENAI_PRICING_LABEL"
+    )
     app_shared_secret: str = Field(..., alias="APP_SHARED_SECRET")
     payphone_enabled: bool = Field(False, alias="PAYPHONE_ENABLED")
     payphone_token: str = Field("", alias="PAYPHONE_TOKEN")

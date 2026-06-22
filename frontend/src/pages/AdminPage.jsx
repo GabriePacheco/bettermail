@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Ban,
   CalendarX2,
+  ChartNoAxesCombined,
   CheckCircle2,
   Crown,
   KeyRound,
@@ -21,6 +22,7 @@ import {
   cancelAdminUser,
   expireAdminUser,
   findAdminUser,
+  getOpenAICosts,
   unblockAdminUser,
 } from "../api/adminApi";
 
@@ -87,6 +89,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [costs, setCosts] = useState(null);
+  const [costLoading, setCostLoading] = useState(false);
   const normalizedEmail = email.trim().toLowerCase();
   const canSearch = Boolean(secret.trim() && normalizedEmail);
   const isBlocked = user?.status === "blocked";
@@ -123,6 +127,19 @@ export default function AdminPage() {
   const confirmAction = (message, request, successMessage) => {
     if (!window.confirm(message)) return;
     runRequest(request, successMessage);
+  };
+
+  const loadCosts = async () => {
+    if (!secret.trim()) return;
+    try {
+      setCostLoading(true);
+      setError("");
+      setCosts(await getOpenAICosts({ secret: secret.trim(), days: 30 }));
+    } catch (err) {
+      setError(err.message || "No se pudo consultar el costo de OpenAI.");
+    } finally {
+      setCostLoading(false);
+    }
   };
 
   return (
@@ -192,6 +209,24 @@ export default function AdminPage() {
         <div className="admin-content">
           {error && <div className="admin-alert error"><XCircle size={18} />{error}</div>}
           {notice && <div className="admin-alert success"><CheckCircle2 size={18} />{notice}</div>}
+
+          <section className="admin-costs">
+            <div className="admin-costs-heading">
+              <div><ChartNoAxesCombined size={19} /><span><strong>Costo de OpenAI</strong><small>Ultimos 30 dias</small></span></div>
+              <button type="button" onClick={loadCosts} disabled={!secret.trim() || costLoading}>
+                {costLoading ? <Loader2 size={16} className="spin-icon" /> : <RefreshCw size={16} />}
+                Consultar
+              </button>
+            </div>
+            {costs && (
+              <div className="admin-cost-grid">
+                <div><span>Costo estimado</span><strong>USD ${Number(costs.estimatedCostUsd).toFixed(4)}</strong></div>
+                <div><span>Solicitudes</span><strong>{costs.requests}</strong></div>
+                <div><span>Tokens totales</span><strong>{costs.totalTokens.toLocaleString("es-EC")}</strong></div>
+                <div><span>Promedio</span><strong>USD ${costs.requests ? (costs.estimatedCostUsd / costs.requests).toFixed(5) : "0.00000"}</strong></div>
+              </div>
+            )}
+          </section>
 
           {!user && (
             <div className="admin-empty">

@@ -194,3 +194,26 @@ class AdminUserResponse(BaseModel):
     cardBrand: Optional[str] = None
     cardLastDigits: Optional[str] = None
     auditEvents: list[AdminAuditEvent] = Field(default_factory=list)
+
+
+class OpenAICostDay(BaseModel):
+    date: str
+    requests: int = 0
+    promptTokens: int = 0
+    cachedPromptTokens: int = 0
+    completionTokens: int = 0
+    totalTokens: int = 0
+    estimatedCostUsd: float = 0
+    model: Optional[str] = None
+    pricingLabel: Optional[str] = None
+
+
+class OpenAICostSummary(BaseModel):
+    days: int
+    requests: int
+    promptTokens: int
+    cachedPromptTokens: int
+    completionTokens: int
+    totalTokens: int
+    estimatedCostUsd: float
+    daily: list[OpenAICostDay] = Field(default_factory=list)

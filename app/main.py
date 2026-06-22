@@ -19,6 +19,7 @@ from app.models import (
     CheckoutRequest,
     CheckoutResponse,
     OfficeUser,
+    OpenAICostSummary,
     PayphoneConfirmRequest,
     PlanResponse,
     RenewalJobRequest,
@@ -36,6 +37,7 @@ from app.admin_service import (
     get_admin_user,
     unblock_user,
 )
+from app.cost_service import get_openai_cost_summary
 from app.security import verify_admin_secret, verify_app_secret, verify_internal_job_secret
 from app.usage_service import check_usage_allowed, consume_rewrite_credit
 from app.openai_service import rewrite_email_text
@@ -242,6 +244,16 @@ def billing_admin_expire(request: Request, payload: AdminActionRequest):
 
 
 @app.get(
+    "/billing/admin/openai-costs",
+    response_model=OpenAICostSummary,
+    dependencies=[Depends(verify_admin_secret)],
+)
+@limiter.limit("10/minute")
+def billing_admin_openai_costs(request: Request, days: int = Query(30, ge=1, le=90)):
+    return get_openai_cost_summary(days)
+
+
+@app.get(
     "/billing/checkout/{order_id}",
     response_model=CheckoutDetailsResponse,
     dependencies=[Depends(verify_app_secret)],
@@ -350,7 +362,7 @@ def rewrite(request: Request, payload: RewriteRequest):
             "rewritten_text": None,
         }
 
-    rewritten_text = rewrite_email_text(
+    rewrite_result = rewrite_email_text(
         text=payload.text,
         tone=payload.tone,
         mode=payload.mode,
@@ -367,8 +379,14 @@ def rewrite(request: Request, payload: RewriteRequest):
             "mode": payload.mode,
             "inputLength": len(payload.text),
             "contextLength": len(payload.context or ""),
-            "outputLength": len(rewritten_text),
-            "model": settings.model_name,
+            "outputLength": len(rewrite_result.text),
+            "model": rewrite_result.model,
+            "openaiPromptTokens": rewrite_result.prompt_tokens,
+            "openaiCachedPromptTokens": rewrite_result.cached_prompt_tokens,
+            "openaiCompletionTokens": rewrite_result.completion_tokens,
+            "openaiTotalTokens": rewrite_result.total_tokens,
+            "openaiEstimatedCostUsd": rewrite_result.estimated_cost_usd,
+            "openaiPricingLabel": rewrite_result.pricing_label,
         },
     )
 
@@ -384,7 +402,7 @@ def rewrite(request: Request, payload: RewriteRequest):
         "monthlyLimit": usage["monthlyLimit"],
         "monthlyUsed": usage_after["monthlyUsed"],
         "upgradeRequired": False,
-        "rewritten_text": rewritten_text,
+        "rewritten_text": rewrite_result.text,
         "detected_tone": None,
         "suggested_tone": payload.tone,
         "message": "Texto reescrito correctamente.",
