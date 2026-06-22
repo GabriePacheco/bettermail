@@ -16,7 +16,7 @@ export default function PlanFooter({
   const isPro = plan === "pro" && status === "active";
   const proPrice = proPlan ? `$${Number(proPlan.price).toFixed(2)}` : "Pro";
   const proSubtitle = isPro
-    ? "Plan activo"
+    ? "Administrar plan"
     : upgradeRequired
       ? "Activar Pro"
       : `${proPrice}/mes`;
@@ -47,7 +47,7 @@ export default function PlanFooter({
       <button
         type="button"
         className={`pro-card ${isPro ? "pro-card-active" : ""}`}
-        disabled={loading || checkoutLoading || isPro}
+        disabled={loading || checkoutLoading}
         onClick={onUpgrade}
       >
         <div className="pro-card-icon">

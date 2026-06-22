@@ -111,7 +111,8 @@ def encrypt_card_holder(card_holder_name: str):
 def build_token_charge_payload(
     *,
     card_token: str,
-    card_holder: str,
+    card_holder: str | None,
+    encrypted_card_holder: str | None = None,
     document_id: str,
     phone_number: str,
     email: str,
@@ -121,12 +122,13 @@ def build_token_charge_payload(
     ip_address: str = "127.0.0.1",
 ):
     settings = _settings()
-    name_parts = (card_holder or "BetterMail User").split()
+    display_name = card_holder or "BetterMail User"
+    name_parts = display_name.split()
     first_name = name_parts[0]
     last_name = " ".join(name_parts[1:]) or name_parts[0]
 
     return {
-        "cardHolder": encrypt_card_holder(card_holder),
+        "cardHolder": encrypted_card_holder or encrypt_card_holder(display_name),
         "cardToken": card_token,
         "documentId": document_id,
         "phoneNumber": phone_number,
@@ -170,3 +172,9 @@ def build_token_charge_payload(
 
 def charge_payphone_card_token(payload: dict):
     return _post_payphone_json(PAYPHONE_TOKEN_CHARGE_URL, payload)
+
+
+def is_payphone_charge_approved(response: dict):
+    status_code = int(response.get("statusCode") or 0)
+    transaction_status = str(response.get("transactionStatus") or "").strip().lower()
+    return status_code == 3 and transaction_status == "approved"

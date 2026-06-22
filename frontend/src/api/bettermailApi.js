@@ -1,6 +1,16 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const PUBLIC_BASE_URL =
+  (import.meta.env.VITE_PUBLIC_BASE_URL || "https://bettermailai.web.app").replace(/\/+$/, "");
 const APP_SECRET =
   import.meta.env.VITE_APP_SHARED_SECRET || import.meta.env.VITE_API_KEY || "";
+
+function requireApiBaseUrl() {
+  if (!API_BASE_URL) {
+    throw new Error("No pudimos conectar con BetterMail AI en este momento.");
+  }
+
+  return API_BASE_URL;
+}
 
 function getHeaders() {
   return {
@@ -44,11 +54,11 @@ function buildCheckoutUrl(checkoutUrl) {
     return checkoutUrl;
   }
 
-  return `${API_BASE_URL}${checkoutUrl}`;
+  return `${requireApiBaseUrl()}${checkoutUrl}`;
 }
 
 export function getPricingUrl(params = {}) {
-  const url = new URL(`${API_BASE_URL}/static/pricing.html`);
+  const url = new URL("/pricing", PUBLIC_BASE_URL);
 
   Object.entries(params).forEach(([key, value]) => {
     if (value) {
@@ -60,7 +70,8 @@ export function getPricingUrl(params = {}) {
 }
 
 export async function getUsageStatus({ user }) {
-  const response = await fetch(`${API_BASE_URL}/usage/status`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/usage/status`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(user),
@@ -74,7 +85,8 @@ export async function getUsageStatus({ user }) {
 }
 
 export async function getPlans() {
-  const response = await fetch(`${API_BASE_URL}/plans`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/plans`, {
     method: "GET",
     headers: getHeaders(),
   });
@@ -92,7 +104,8 @@ export async function createCheckout({
   provider = "payphone_cajita",
   source = "outlook_addin",
 }) {
-  const response = await fetch(`${API_BASE_URL}/billing/checkout`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/billing/checkout`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -130,7 +143,8 @@ export async function createCheckout({
 }
 
 export async function getCheckoutDetails({ orderId }) {
-  const response = await fetch(`${API_BASE_URL}/billing/checkout/${orderId}`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/billing/checkout/${orderId}`, {
     method: "GET",
     headers: getHeaders(),
   });
@@ -181,7 +195,8 @@ function normalizePayphone(data) {
 }
 
 export async function confirmPayphonePayment({ id, clientTransactionId, cardToken }) {
-  const response = await fetch(`${API_BASE_URL}/billing/payphone/confirm`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/billing/payphone/confirm`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -208,7 +223,8 @@ export async function confirmPayphonePayment({ id, clientTransactionId, cardToke
 }
 
 export async function getBillingStatus({ user }) {
-  const response = await fetch(`${API_BASE_URL}/billing/status`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/billing/status`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({ user }),
@@ -218,7 +234,61 @@ export async function getBillingStatus({ user }) {
     throw new Error("No se pudo obtener el estado de billing.");
   }
 
-  return response.json();
+  return normalizeBillingStatus(await response.json());
+}
+
+function normalizeBillingStatus(data) {
+  return {
+    plan: data.plan || "trial",
+    status: data.status || "trial",
+    subscriptionStatus: data.subscriptionStatus || data.subscription_status || null,
+    monthlyLimit: Number(data.monthlyLimit ?? data.monthly_limit ?? 0),
+    monthlyUsed: Number(data.monthlyUsed ?? data.monthly_used ?? 0),
+    currentPeriodEnd: data.currentPeriodEnd || data.current_period_end || null,
+    gracePeriodEnd: data.gracePeriodEnd || data.grace_period_end || null,
+    nextRenewalAttemptAt:
+      data.nextRenewalAttemptAt || data.next_renewal_attempt_at || null,
+    cancelAtPeriodEnd: Boolean(
+      data.cancelAtPeriodEnd ?? data.cancel_at_period_end ?? false,
+    ),
+    autoRenew: Boolean(data.autoRenew ?? data.auto_renew ?? false),
+    paymentActionRequired: Boolean(
+      data.paymentActionRequired ?? data.payment_action_required ?? false,
+    ),
+    renewalFailureCount: Number(
+      data.renewalFailureCount ?? data.renewal_failure_count ?? 0,
+    ),
+  };
+}
+
+async function updateSubscription(path, { user, reason }) {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ user, reason: reason || null }),
+  });
+
+  if (!response.ok) {
+    let message = "No se pudo actualizar la suscripcion.";
+    try {
+      const errorData = await response.json();
+      message = errorData.detail || errorData.message || message;
+    } catch {
+      // Keep default message.
+    }
+    throw new Error(message);
+  }
+
+  return normalizeBillingStatus(await response.json());
+}
+
+export function cancelSubscription({ user, reason }) {
+  return updateSubscription("/billing/cancel", { user, reason });
+}
+
+export function reactivateSubscription({ user }) {
+  return updateSubscription("/billing/reactivate", { user });
 }
 
 export async function rewriteEmail({
@@ -229,7 +299,8 @@ export async function rewriteEmail({
   mode = "rewrite_draft",
   context,
 }) {
-  const response = await fetch(`${API_BASE_URL}/rewrite`, {
+  const apiBaseUrl = requireApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/rewrite`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({

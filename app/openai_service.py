@@ -30,6 +30,8 @@ Reglas obligatorias:
 - Se claro, natural y breve.
 - Manten el idioma del contexto.
 - Usa un tono: {tone_description}.
+- Si el contexto contiene enojo, insultos o agresividad verbal no fisica, responde con una version profesional, firme, respetuosa y segura.
+- No incluyas amenazas, violencia, insultos, acoso, crimen ni acusaciones legales no sustentadas.
 - Devuelve unicamente la respuesta sugerida, sin explicaciones, sin markdown y sin comillas.
 -Ten en mente un correo completo, con saludo, cuerpo y despedida, aunque el texto original solo tenga el cuerpo del correo.
 
@@ -56,6 +58,12 @@ Reglas obligatorias:
 - Respeta saltos de línea significativos y listas de una línea por elemento.
 - Manten el idioma original.
 - Usa un tono: {tone_description}.
+- Si el texto expresa enojo, insultos, frustracion o agresividad verbal no fisica, transformalo en un mensaje profesional, firme, respetuoso y seguro.
+- Mantén la intencion comunicativa razonable: desacuerdo, reclamo, limite, solicitud de respuesta, advertencia formal o cierre de conversacion.
+- No conserves amenazas, lenguaje violento, insultos ni expresiones humillantes.
+- No amplifiques el conflicto ni agregues dano fisico, acoso, crimen o intimidacion.
+- No hagas acusaciones legales no sustentadas.
+- Si el usuario pide conservar o ejecutar dano real, crimen, acoso dirigido o amenaza directa, rechaza brevemente y ofrece una alternativa profesional segura.
 - Devuelve unicamente el texto reescrito, sin explicaciones, sin markdown y sin comillas.
 -Ten en mente un correo completo, con saludo, cuerpo y despedida, aunque el texto original solo tenga el cuerpo del correo.
 
@@ -84,7 +92,9 @@ def rewrite_email_text(
                 "role": "system",
                 "content": (
                     "Eres BetterMail AI, un asistente experto en correos profesionales. "
-                    "Tu objetivo es mejorar claridad, ortografia, estructura y tono sin cambiar el sentido original."
+                    "Tu objetivo es mejorar claridad, ortografia, estructura y tono sin cambiar el sentido original. "
+                    "Cuando el usuario escriba con enojo o agresividad verbal no fisica, convierte el mensaje "
+                    "en comunicacion profesional, firme y respetuosa sin conservar amenazas ni insultos."
                 ),
             },
             {

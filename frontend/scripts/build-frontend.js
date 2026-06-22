@@ -34,6 +34,10 @@ console.log("Generating frontend build...");
 
 execSync("npm run build", {
   cwd: frontendDir,
+  env: {
+    ...process.env,
+    FRONTEND_BASE: "/static/",
+  },
   stdio: "inherit",
 });
 
@@ -53,7 +57,9 @@ if (!fs.existsSync(indexPath)) {
   throw new Error("index.html was not found in app/static.");
 }
 
-fs.copyFileSync(indexPath, taskpanePath);
+if (!fs.existsSync(taskpanePath)) {
+  fs.copyFileSync(indexPath, taskpanePath);
+}
 
-console.log("taskpane.html created.");
+console.log("taskpane.html ready.");
 console.log("Frontend ready in app/static.");

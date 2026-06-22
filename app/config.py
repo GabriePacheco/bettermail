@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     payphone_token: str = Field("", alias="PAYPHONE_TOKEN")
     payphone_store_id: str = Field("", alias="PAYPHONE_STORE_ID")
     payphone_coding_password: str = Field("", alias="PAYPHONE_CODING_PASSWORD")
+    payphone_recurring_enabled: bool = Field(False, alias="PAYPHONE_RECURRING_ENABLED")
+    internal_job_secret: str = Field("", alias="INTERNAL_JOB_SECRET")
+    admin_api_secret: str = Field("", alias="ADMIN_API_SECRET")
+    billing_grace_days: int = Field(3, alias="BILLING_GRACE_DAYS")
+    billing_max_renewal_attempts: int = Field(3, alias="BILLING_MAX_RENEWAL_ATTEMPTS")
 
     class Config:
         env_file = ".env"

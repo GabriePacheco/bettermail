@@ -309,12 +309,22 @@ function assertQuotedHtmlPreserved(finalHtml, quotedHtml) {
   }
 }
 
+function buildQuoteSeparator(baseHtml = "") {
+  const style = getBaseStyleAttribute(baseHtml);
+  return `<div${style}><br></div><div${style}><br></div>`;
+}
+
+function appendQuotedWithSeparator(contentHtml, quotedHtml, baseHtml = "") {
+  if (!quotedHtml) return contentHtml || "";
+  return `${contentHtml || ""}${buildQuoteSeparator(baseHtml)}${quotedHtml}`;
+}
+
 export function mergeImprovedWithQuoted(improvedHtml, quotedHtml) {
-  return `${improvedHtml || ""}${quotedHtml || ""}`;
+  return appendQuotedWithSeparator(improvedHtml, quotedHtml, improvedHtml);
 }
 
 export function insertImprovedBelowDraft(draftHtml, improvedHtml, quotedHtml) {
-  return `${draftHtml || ""}${improvedHtml || ""}${quotedHtml || ""}`;
+  return appendQuotedWithSeparator(`${draftHtml || ""}${improvedHtml || ""}`, quotedHtml, draftHtml);
 }
 
 export function buildFinalHtmlAfterReplace({
@@ -324,7 +334,11 @@ export function buildFinalHtmlAfterReplace({
   quotedHtml,
 }) {
   const improvedDraftHtml = plainTextToOutlookHtml(improvedText, draftHtml);
-  const finalHtml = `${improvedDraftHtml || ""}${signatureHtml || ""}${quotedHtml || ""}`;
+  const finalHtml = appendQuotedWithSeparator(
+    `${improvedDraftHtml || ""}${signatureHtml || ""}`,
+    quotedHtml,
+    draftHtml
+  );
 
   assertQuotedHtmlPreserved(finalHtml, quotedHtml);
   return finalHtml;
@@ -337,7 +351,11 @@ export function buildFinalHtmlAfterInsertBelow({
   quotedHtml,
 }) {
   const improvedHtml = plainTextToOutlookHtml(improvedText, draftHtml);
-  const finalHtml = `${draftHtml || ""}${improvedHtml || ""}${signatureHtml || ""}${quotedHtml || ""}`;
+  const finalHtml = appendQuotedWithSeparator(
+    `${draftHtml || ""}${improvedHtml || ""}${signatureHtml || ""}`,
+    quotedHtml,
+    draftHtml
+  );
 
   assertQuotedHtmlPreserved(finalHtml, quotedHtml);
   return finalHtml;

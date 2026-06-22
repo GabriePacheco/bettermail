@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 
 Tone = Literal[
@@ -122,3 +122,75 @@ class BillingStatusResponse(BaseModel):
     monthlyLimit: int
     monthlyUsed: int
     currentPeriodEnd: Optional[str] = None
+    gracePeriodEnd: Optional[str] = None
+    nextRenewalAttemptAt: Optional[str] = None
+    cancelAtPeriodEnd: bool = False
+    autoRenew: bool = False
+    paymentActionRequired: bool = False
+    renewalFailureCount: int = 0
+
+
+class SubscriptionActionRequest(BaseModel):
+    user: OfficeUser
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class RenewalJobRequest(BaseModel):
+    limit: int = Field(default=100, ge=1, le=500)
+    dry_run: bool = False
+
+
+class RenewalJobResponse(BaseModel):
+    scanned: int
+    due: int
+    renewed: int
+    past_due: int
+    expired: int
+    cancelled: int
+    skipped: int
+    errors: int
+    dry_run: bool
+
+
+class AdminUserRequest(BaseModel):
+    email: EmailStr
+
+
+class AdminActionRequest(AdminUserRequest):
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class AdminActivateRequest(AdminUserRequest):
+    plan_id: str = "pro_monthly"
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+class AdminAuditEvent(BaseModel):
+    action: str
+    createdAt: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AdminUserResponse(BaseModel):
+    exists: bool
+    email: EmailStr
+    displayName: Optional[str] = None
+    accountType: Optional[str] = None
+    plan: str = "trial"
+    status: str = "not_found"
+    subscriptionStatus: Optional[str] = None
+    trialLimit: int = 0
+    trialUsed: int = 0
+    monthlyLimit: int = 0
+    monthlyUsed: int = 0
+    currentPeriodEnd: Optional[str] = None
+    gracePeriodEnd: Optional[str] = None
+    cancelAtPeriodEnd: bool = False
+    autoRenew: bool = False
+    paymentActionRequired: bool = False
+    renewalFailureCount: int = 0
+    paymentProvider: Optional[str] = None
+    hasReusablePaymentMethod: bool = False
+    cardBrand: Optional[str] = None
+    cardLastDigits: Optional[str] = None
+    auditEvents: list[AdminAuditEvent] = Field(default_factory=list)

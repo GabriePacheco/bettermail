@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
+  CalendarClock,
   CircleAlert,
   CreditCard,
   Loader2,
@@ -8,12 +9,17 @@ import {
   Mail,
   ShieldCheck,
   Star,
+  RotateCcw,
+  XCircle,
 } from "lucide-react";
 
 import {
+  cancelSubscription,
   confirmPayphonePayment,
   createCheckout,
+  getBillingStatus,
   getCheckoutDetails,
+  reactivateSubscription,
 } from "../api/bettermailApi";
 
 const BRAND_MARK = `${import.meta.env.BASE_URL}addin-icons/icon-128.png`;
@@ -29,6 +35,7 @@ const DEFAULT_PLAN = {
 function loadPayphoneAssets() {
   const scriptId = "payphone-box-js";
   const styleId = "payphone-box-css";
+  const overrideStyleId = "payphone-layout-overrides";
 
   if (!document.getElementById(styleId)) {
     const link = document.createElement("link");
@@ -36,6 +43,24 @@ function loadPayphoneAssets() {
     link.rel = "stylesheet";
     link.href = "https://cdn.payphonetodoesposible.com/box/v2.0/payphone-payment-box.css";
     document.head.appendChild(link);
+  }
+
+  if (!document.getElementById(overrideStyleId)) {
+    const style = document.createElement("style");
+    style.id = overrideStyleId;
+    style.textContent = `
+      body > #root { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+      #payphone-box .ppb-content { width: 100% !important; justify-content: stretch !important; }
+      #payphone-box .payment-box {
+        flex-basis: 100% !important;
+        width: 100% !important;
+        max-width: none !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+      #payphone-box .ppb-container { max-width: none !important; padding-left: 0 !important; padding-right: 0 !important; }
+    `;
+    document.head.appendChild(style);
   }
 
   if (window.PPaymentButtonBox || document.getElementById(scriptId)) {
@@ -64,6 +89,41 @@ function queryUser() {
   };
 }
 
+function queryBillingPreview() {
+  if (!import.meta.env.DEV) return null;
+  const preview = new URLSearchParams(window.location.search).get("preview_billing");
+  if (!preview) return null;
+
+  const base = {
+    plan: "pro",
+    status: "active",
+    subscriptionStatus: "active",
+    monthlyLimit: 300,
+    monthlyUsed: 42,
+    currentPeriodEnd: new Date(Date.now() + 14 * 86400000).toISOString(),
+    gracePeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    autoRenew: true,
+    paymentActionRequired: false,
+    renewalFailureCount: 0,
+  };
+
+  if (preview === "cancel_pending") {
+    return { ...base, subscriptionStatus: "cancel_pending", cancelAtPeriodEnd: true, autoRenew: false };
+  }
+  if (preview === "past_due") {
+    return {
+      ...base,
+      subscriptionStatus: "past_due",
+      currentPeriodEnd: new Date(Date.now() - 86400000).toISOString(),
+      gracePeriodEnd: new Date(Date.now() + 3 * 86400000).toISOString(),
+      paymentActionRequired: true,
+      renewalFailureCount: 1,
+    };
+  }
+  return base;
+}
+
 function Brand() {
   return (
     <div className="pricing-brand">
@@ -73,16 +133,143 @@ function Brand() {
   );
 }
 
-function PlanSelection({ user, onSelect, loading }) {
+function formatDate(value) {
+  if (!value) return "No disponible";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No disponible";
+  return new Intl.DateTimeFormat("es-EC", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function PageHeader() {
   return (
-    <main className="pricing-shell">
-      <header className="pricing-header">
+    <header className="pricing-header">
+      <div className="pricing-header-inner">
         <Brand />
         <div className="pricing-secure">
           <LockKeyhole size={16} />
           Pago seguro
         </div>
-      </header>
+      </div>
+    </header>
+  );
+}
+
+function SubscriptionManager({
+  user,
+  billing,
+  loading,
+  error,
+  message,
+  onCancel,
+  onReactivate,
+  onUpdatePayment,
+}) {
+  const isCancelPending = billing.cancelAtPeriodEnd || billing.subscriptionStatus === "cancel_pending";
+  const isPastDue = billing.subscriptionStatus === "past_due" || billing.paymentActionRequired;
+  const isManualRenewal = !billing.autoRenew && !isCancelPending && !isPastDue;
+  const statusTitle = isPastDue
+    ? "No pudimos renovar tu plan"
+    : isCancelPending
+      ? "Cancelacion programada"
+      : "BetterMail Pro esta activo";
+
+  return (
+    <main className="pricing-shell">
+      <PageHeader />
+      <section className="subscription-page">
+        <div className="subscription-heading">
+          <p>Tu suscripcion</p>
+          <h1>Administrar BetterMail Pro</h1>
+          <span>{user.email}</span>
+        </div>
+
+        <div className={`subscription-manage-card ${isPastDue ? "attention" : ""}`}>
+          <div className="subscription-status-icon">
+            {isPastDue ? <CircleAlert size={24} /> : <Check size={24} />}
+          </div>
+          <div className="subscription-status-copy">
+            <h2>{statusTitle}</h2>
+            <p>
+              {isPastDue
+                ? `Puedes usar el plan durante el periodo de gracia hasta ${formatDate(billing.gracePeriodEnd)}.`
+                : isCancelPending
+                  ? `Conservaras Pro hasta ${formatDate(billing.currentPeriodEnd)}. No se haran mas cobros.`
+                  : isManualRenewal
+                    ? `Tu acceso esta activo hasta ${formatDate(billing.currentPeriodEnd)}. No se realizara otro cobro automatico.`
+                    : `Proximo cobro previsto para ${formatDate(billing.currentPeriodEnd)}.`}
+            </p>
+          </div>
+
+          <div className="subscription-facts">
+            <div>
+              <span>Plan</span>
+              <strong>BetterMail Pro</strong>
+            </div>
+            <div>
+              <span>Uso del periodo</span>
+              <strong>{billing.monthlyUsed}/{billing.monthlyLimit}</strong>
+            </div>
+            <div>
+              <span>Renovacion</span>
+              <strong>{billing.autoRenew ? "Automatica" : "Manual"}</strong>
+            </div>
+            <div>
+              <span>{isPastDue ? "Periodo finalizo" : "Vigente hasta"}</span>
+              <strong>{formatDate(billing.currentPeriodEnd)}</strong>
+            </div>
+          </div>
+
+          <div className="subscription-actions">
+            {isPastDue && (
+              <button type="button" className="primary-plan-button" onClick={onUpdatePayment} disabled={loading}>
+                <CreditCard size={17} />
+                Actualizar pago
+              </button>
+            )}
+            {isCancelPending ? (
+              <button type="button" className="primary-plan-button" onClick={onReactivate} disabled={loading}>
+                <RotateCcw size={17} />
+                Reactivar renovacion
+              </button>
+            ) : !isPastDue && billing.autoRenew ? (
+              <button type="button" className="subscription-cancel-button" onClick={onCancel} disabled={loading}>
+                <XCircle size={17} />
+                Cancelar al final del periodo
+              </button>
+            ) : null}
+          </div>
+
+          {loading && (
+            <div className="pricing-state">
+              <Loader2 className="spin-icon" size={18} />
+              Actualizando suscripcion...
+            </div>
+          )}
+          {message && <div className="pricing-message">{message}</div>}
+          {error && <div className="pricing-error"><CircleAlert size={17} />{error}</div>}
+        </div>
+
+        <div className="subscription-note">
+          <CalendarClock size={18} />
+          {isPastDue
+            ? "Actualiza el metodo de pago antes de terminar el periodo de gracia para conservar Pro."
+            : isManualRenewal
+              ? "Este pago no tiene renovacion automatica. No se realizara otro cobro al terminar el periodo."
+            : "La cancelacion no elimina el acceso inmediatamente. El plan permanece activo hasta terminar el periodo pagado."}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function PlanSelection({ user, onSelect, loading }) {
+  return (
+    <main className="pricing-shell">
+      <PageHeader />
 
       <section className="plans-page">
         <div className="plans-heading">
@@ -116,7 +303,7 @@ function PlanSelection({ user, onSelect, loading }) {
             <h2>BetterMail Pro</h2>
             <div className="plan-price">
               <strong>$4.99</strong>
-              <span>/ mes</span>
+              <span>/ 30 dias</span>
             </div>
             <p>Para usar BetterMail AI todos los dias desde Outlook.</p>
             <button
@@ -144,6 +331,7 @@ function PlanSelection({ user, onSelect, loading }) {
 }
 
 export default function PricingPage() {
+  const billingPreview = useMemo(() => queryBillingPreview(), []);
   const orderId = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("order_id") || "";
@@ -164,12 +352,20 @@ export default function PricingPage() {
   const [user] = useState(queryUser);
   const [checkout, setCheckout] = useState(null);
   const [status, setStatus] = useState(
-    payphoneReturn.id && payphoneReturn.clientTransactionId
+    billingPreview
+      ? "manage"
+      : payphoneReturn.id && payphoneReturn.clientTransactionId
       ? "confirming"
       : orderId
         ? "loading"
-        : initialCheckoutStatus === "unavailable" ? "unavailable" : "plans",
+        : initialCheckoutStatus === "unavailable"
+          ? "unavailable"
+          : user.email
+            ? "checking"
+            : "plans",
   );
+  const [billing, setBilling] = useState(billingPreview);
+  const [managementLoading, setManagementLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const payphoneContainerRef = useRef(null);
@@ -212,6 +408,67 @@ export default function PricingPage() {
       setError(err.message || "");
     }
   };
+
+  const manageCancellation = async () => {
+    if (!window.confirm("Tu plan seguira activo hasta terminar el periodo pagado. ¿Deseas cancelar la renovacion?")) {
+      return;
+    }
+    try {
+      setManagementLoading(true);
+      setError("");
+      setMessage("");
+      const result = await cancelSubscription({
+        user,
+        reason: "user_requested_from_pricing",
+      });
+      setBilling(result);
+      setMessage("La renovacion fue cancelada. Mantendras Pro hasta la fecha indicada.");
+    } catch (err) {
+      setError(err.message || "No se pudo cancelar la renovacion.");
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  const manageReactivation = async () => {
+    try {
+      setManagementLoading(true);
+      setError("");
+      setMessage("");
+      const result = await reactivateSubscription({ user });
+      setBilling(result);
+      setMessage("La renovacion automatica fue reactivada.");
+    } catch (err) {
+      setError(err.message || "No se pudo reactivar la renovacion.");
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status !== "checking" || !user.email) {
+      return;
+    }
+
+    let cancelled = false;
+    const loadBilling = async () => {
+      try {
+        const result = await getBillingStatus({ user });
+        if (cancelled) return;
+        setBilling(result);
+        const hasManagedSubscription =
+          result.plan === "pro" &&
+          ["active", "cancel_pending", "past_due"].includes(result.subscriptionStatus);
+        setStatus(hasManagedSubscription ? "manage" : "plans");
+      } catch {
+        if (!cancelled) setStatus("plans");
+      }
+    };
+    loadBilling();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, user]);
 
   useEffect(() => {
     if (status !== "confirming") {
@@ -366,25 +623,47 @@ export default function PricingPage() {
     renderPayphone();
   }, [checkout, contactEmail, status]);
 
-  if (status === "plans") {
+  if (status === "checking") {
+    return (
+      <main className="pricing-shell">
+        <PageHeader />
+        <div className="subscription-loading">
+          <Loader2 className="spin-icon" size={22} />
+          Cargando tu plan...
+        </div>
+      </main>
+    );
+  }
+
+  if (status === "manage" && billing) {
+    return (
+      <SubscriptionManager
+        user={user}
+        billing={billing}
+        loading={managementLoading}
+        error={error}
+        message={message}
+        onCancel={manageCancellation}
+        onReactivate={manageReactivation}
+        onUpdatePayment={startCheckout}
+      />
+    );
+  }
+
+  if (status === "plans" || status === "unavailable") {
     return <PlanSelection user={user} onSelect={startCheckout} loading={isLoading} />;
   }
 
   return (
     <main className="pricing-shell">
-      <header className="pricing-header">
-        <Brand />
-        <div className="pricing-secure">
-          <LockKeyhole size={16} />
-          Pago seguro
-        </div>
-      </header>
+      <PageHeader />
 
-      <section className="pricing-layout">
+      <section className="pricing-layout checkout-card">
         <div className="pricing-main">
           <div className="contact-block">
             <div className="pricing-section-title">
               <span>Contacto</span>
+              <small>Usaremos este correo para enviarte la confirmacion.</small>
             </div>
             <div className="contact-input">
               <Mail size={18} />
@@ -398,7 +677,7 @@ export default function PricingPage() {
               <small>
                 {isActive
                   ? "BetterMail Pro ya esta activo para esta cuenta."
-                  : "Ingresa tu tarjeta en la cajita segura de PayPhone."}
+                  : "Tu pago se procesa de forma segura."}
               </small>
             </div>
 
@@ -424,15 +703,10 @@ export default function PricingPage() {
             {!isLoading && !isActive && status !== "error" && (
               <>
                 {checkout?.payphone ? (
-                  <div className="payphone-payment-box">
-                    <div className="payphone-card-head">
-                      <div className="payment-pending-icon">
-                        <CreditCard size={22} />
-                      </div>
-                      <div>
-                        <strong>Tarjeta de credito o debito</strong>
-                        <p>PayPhone procesa los datos de tarjeta. BetterMail solo recibe la confirmacion.</p>
-                      </div>
+                  <div className="payphone-payment-area">
+                    <div className="payment-trust-line">
+                      <ShieldCheck size={17} />
+                      <span>Procesado de forma segura por PayPhone.</span>
                     </div>
                     <div id="payphone-box" ref={payphoneContainerRef} />
                   </div>
@@ -452,7 +726,7 @@ export default function PricingPage() {
                 )}
 
                 <div className="pricing-message">
-                  Para tokenizar la tarjeta, PayPhone debe tener habilitada la funcionalidad en tu comercio.
+                  BetterMail no almacena los datos de tu tarjeta.
                 </div>
               </>
             )}
@@ -473,14 +747,14 @@ export default function PricingPage() {
             <img className="summary-product-logo" src={BRAND_MARK} alt="" />
             <div>
               <p className="summary-product-name">BetterMail Pro</p>
-              <p className="summary-product-meta">Suscripcion mensual</p>
+              <p className="summary-product-meta">Acceso por 30 dias</p>
             </div>
             <strong>${price.toFixed(2)}</strong>
           </div>
 
           <div className="summary-lines">
             <div className="summary-line">
-              <span>Subtotal recurrente</span>
+              <span>Precio por periodo</span>
               <strong>${price.toFixed(2)}</strong>
             </div>
             <div className="summary-line muted">
@@ -495,12 +769,12 @@ export default function PricingPage() {
           </div>
 
           <div className="summary-renewal">
-            ${price.toFixed(2)} cada mes hasta cancelar.
+            Renovacion automatica solo cuando el metodo de pago tokenizado este disponible.
           </div>
 
           <div className="summary-security">
             <ShieldCheck size={17} />
-            BetterMail no almacena datos de tarjeta. PayPhone puede devolver un token para cobros futuros.
+            Pago seguro procesado por PayPhone.
           </div>
 
           <div className="summary-features">
@@ -519,6 +793,13 @@ export default function PricingPage() {
           </div>
         </aside>
       </section>
+
+      <footer className="pricing-footer">
+        <span>© 2025 BetterMail AI.</span>
+        <a href="/terms">Terminos de servicio</a>
+        <a href="/privacy">Privacidad</a>
+        <a href="/support">Soporte</a>
+      </footer>
     </main>
   );
 }

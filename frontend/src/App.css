@@ -207,6 +207,100 @@ button {
   color: #fca5a5;
 }
 
+.outlook-source {
+  padding: 7px 8px;
+}
+
+.outlook-source-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.outlook-source-copy {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--bm-text-secondary);
+}
+
+.outlook-source-copy p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outlook-source-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--bm-bg-muted);
+  color: var(--bm-text-secondary);
+}
+
+.outlook-source-success {
+  border-color: var(--bm-border);
+}
+
+.outlook-source-success .outlook-source-copy,
+.outlook-source-success .outlook-source-icon {
+  color: var(--bm-text-secondary);
+}
+
+.outlook-source-success .outlook-source-icon {
+  background: var(--bm-bg-muted);
+}
+
+[data-theme="dark"] .outlook-source-success {
+  border-color: var(--bm-border);
+}
+
+[data-theme="dark"] .outlook-source-success .outlook-source-icon {
+  background: var(--bm-accent-soft);
+}
+
+.outlook-refresh {
+  border-color: var(--bm-border);
+  background: var(--bm-bg-muted);
+  color: var(--bm-text-secondary);
+  min-height: 28px;
+}
+
+.outlook-source-details {
+  margin-top: 6px;
+  padding-left: 29px;
+  color: var(--bm-text-secondary);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.outlook-source-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--bm-text-secondary);
+  font-weight: 700;
+}
+
+.outlook-source-details p {
+  margin: 5px 0 0;
+  padding: 6px 7px;
+  border: 1px solid var(--bm-border);
+  border-radius: 6px;
+  background: var(--bm-bg-muted);
+  white-space: pre-wrap;
+}
+
 .tone-card {
   border: 0;
   border-radius: 0;
@@ -484,22 +578,22 @@ button {
 }
 
 .improved-card .email-card-icon {
-  background: var(--bm-success-bg);
-  color: var(--bm-success-text);
+  background: var(--bm-bg-muted);
+  color: var(--bm-text-secondary);
 }
 
 .improved-card .email-textarea-empty {
-  min-height: 118px;
+  min-height: 228px;
 }
 
 .improved-card .email-textarea-filled {
-  min-height: 150px;
+  min-height: 286px;
 }
 
 .generated-badge {
-  border-color: rgba(15, 108, 189, 0.14);
-  background: var(--bm-accent-soft);
-  color: var(--bm-accent);
+  border-color: var(--bm-border);
+  background: var(--bm-bg-muted);
+  color: var(--bm-text-secondary);
 }
 
 .actions-grid {
@@ -771,11 +865,11 @@ button {
   }
 
   .improved-card .email-textarea-empty {
-    min-height: 110px;
+    min-height: 209px;
   }
 
   .improved-card .email-textarea-filled {
-    min-height: 140px;
+    min-height: 262px;
   }
 
   .refresh-badge {
@@ -867,7 +961,7 @@ button {
   }
 
   .improved-card .email-textarea {
-    min-height: 180px;
+    min-height: 331px;
   }
 
   .actions-grid {

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlignLeft,
   Briefcase,
-  FileText,
+  CheckCircle2,
   Gem,
   Mail,
+  RefreshCw,
   Shield,
   Smile,
   Sparkles,
@@ -43,7 +44,6 @@ export default function Taskpane() {
   useOfficeTheme();
 
   const {
-    originalText,
     draftText,
     quotedText,
     isReply,
@@ -103,6 +103,30 @@ export default function Taskpane() {
     }
 
     return null;
+  }, [draftText, isReply, quotedText]);
+
+  const compactOutlookStatus = useMemo(() => {
+    if (isMeaningfulText(draftText)) {
+      return {
+        type: "success",
+        text: "Texto detectado desde Outlook",
+        detail: draftText,
+      };
+    }
+
+    if (isReply && isMeaningfulText(quotedText)) {
+      return {
+        type: "context",
+        text: "Puedo sugerirte una respuesta usando el contexto del correo anterior.",
+        detail: quotedText,
+      };
+    }
+
+    return {
+      type: "empty",
+      text: "Escribe un texto en Outlook para poder mejorarlo.",
+      detail: "",
+    };
   }, [draftText, isReply, quotedText]);
 
   const handleRewrite = useCallback(async () => {
@@ -224,7 +248,7 @@ export default function Taskpane() {
   const handleReplace = async () => {
     try {
       setActionError("");
-      await replaceDraftWithText(improvedText);
+      await replaceDraftWithText(improvedText, lastRewriteMode);
     } catch (err) {
       setActionError(err.message || "No se pudo reemplazar el contenido.");
     }
@@ -294,18 +318,6 @@ export default function Taskpane() {
     }
   };
 
-  const originalHelperText = useMemo(() => {
-    if (isMeaningfulText(draftText)) {
-      return "Solo se procesará tu texto, no el historial del correo.";
-    }
-
-    if (isReply && isMeaningfulText(quotedText)) {
-      return "No has escrito una respuesta todavía. Puedo sugerirte una respuesta usando el contexto del correo anterior.";
-    }
-
-    return "Escribe un texto en el correo para poder mejorarlo.";
-  }, [draftText, isReply, quotedText]);
-
   return (
     <main className="bm-shell">
       <div className="bm-container">
@@ -323,24 +335,6 @@ export default function Taskpane() {
           options={toneOptions}
           value={selectedTone}
           onChange={handleToneChange}
-        />
-
-        <EmailCard
-          title="Original"
-          badge={
-            <button
-              type="button"
-              onClick={handleRefreshFromOutlook}
-              className="refresh-badge"
-            >
-              <Mail size={14} />
-              Desde Outlook
-            </button>
-          }
-          icon={FileText}
-          value={originalText}
-          readOnly
-          helperText={originalHelperText}
         />
 
         <EmailCard
@@ -370,6 +364,37 @@ export default function Taskpane() {
           onCopy={handleCopy}
           onRegenerate={handleRewrite}
         />
+
+        <section className={`outlook-source bm-card outlook-source-${compactOutlookStatus.type}`}>
+          <div className="outlook-source-row">
+            <div className="outlook-source-copy">
+              <span className="outlook-source-icon" aria-hidden="true">
+                {compactOutlookStatus.type === "success" ? (
+                  <CheckCircle2 size={16} />
+                ) : (
+                  <Mail size={16} />
+                )}
+              </span>
+              <p>{compactOutlookStatus.text}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRefreshFromOutlook}
+              className="refresh-badge outlook-refresh"
+            >
+              <RefreshCw size={14} />
+              Actualizar
+            </button>
+          </div>
+
+          {compactOutlookStatus.detail && (
+            <details className="outlook-source-details">
+              <summary>Ver texto detectado</summary>
+              <p>{limitText(compactOutlookStatus.detail, 280)}</p>
+            </details>
+          )}
+        </section>
 
         <PlanFooter
           used={usage.used}

@@ -70,6 +70,8 @@ def check_usage_allowed(user, trial_limit: int):
     monthly_used = _as_int(data.get("monthlyUsed", 0))
     monthly_limit = _as_int(data.get("monthlyLimit", 0))
     current_period_end = data.get("currentPeriodEnd")
+    grace_period_end = data.get("gracePeriodEnd")
+    payment_action_required = bool(data.get("paymentActionRequired", False))
 
     if user_status == "blocked":
         return _usage_response(
@@ -86,8 +88,16 @@ def check_usage_allowed(user, trial_limit: int):
             upgrade_required=True,
         )
 
-    if plan == "pro" and user_status == "active" and subscription_status == "active":
-        if not _is_future(current_period_end):
+    if plan == "pro":
+        subscription_is_usable = (
+            subscription_status in {"active", "cancel_pending"}
+            and _is_future(current_period_end)
+        ) or (
+            subscription_status == "past_due"
+            and _is_future(grace_period_end)
+        )
+
+        if not subscription_is_usable:
             return _usage_response(
                 allowed=False,
                 status="subscription_expired",
@@ -98,7 +108,11 @@ def check_usage_allowed(user, trial_limit: int):
                 trial_limit=actual_trial_limit,
                 monthly_used=monthly_used,
                 monthly_limit=monthly_limit,
-                message="La suscripcion Pro no esta vigente.",
+                message=(
+                    "No pudimos renovar tu plan. Actualiza el pago para continuar."
+                    if payment_action_required
+                    else "La suscripcion Pro no esta vigente."
+                ),
                 upgrade_required=True,
             )
 

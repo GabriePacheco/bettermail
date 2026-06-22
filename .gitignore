@@ -30,6 +30,7 @@ app/static/
 .npm-cache/
 .tmp/
 .git-backups/
+.firebase/
 logs/
 *.log
 npm-debug.log*

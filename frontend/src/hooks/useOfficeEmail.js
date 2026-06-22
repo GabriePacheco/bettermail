@@ -4,6 +4,7 @@ import {
   buildFinalHtmlAfterInsertBelow,
   buildFinalHtmlAfterReplace,
   extractCurrentDraftZone,
+  plainTextToOutlookHtml,
 } from "../utils/emailHtml";
 
 const previewHtml = `<p>Hola Juan,</p>
@@ -103,6 +104,33 @@ function setBodyHtml(html) {
   });
 }
 
+function prependBodyHtml(html) {
+  return new Promise((resolve, reject) => {
+    try {
+      const item = ensureOffice();
+
+      if (typeof item.body.prependAsync !== "function") {
+        reject(new Error("Outlook no permite insertar la respuesta al inicio."));
+        return;
+      }
+
+      item.body.prependAsync(
+        html,
+        { coercionType: window.Office.CoercionType.Html },
+        (result) => {
+          if (result.status === window.Office.AsyncResultStatus.Succeeded) {
+            resolve(true);
+          } else {
+            reject(new Error("No se pudo insertar la respuesta al inicio."));
+          }
+        }
+      );
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 async function copyToClipboard(text) {
   try {
     if (navigator.clipboard?.writeText) {
@@ -182,8 +210,16 @@ export function useOfficeEmail() {
   }, []);
 
   useEffect(() => {
-    const loadFromOffice = async () => {
+    let cancelled = false;
+    let intervalId;
+    let timeoutId;
+
+    const loadFromOffice = async ({ allowPreview = false } = {}) => {
+      if (cancelled) return;
+
       if (!canUseOutlookItem()) {
+        if (!allowPreview) return;
+
         setIsPreviewMode(true);
         setIsReady(true);
         setUserProfile(readUserProfile());
@@ -198,8 +234,10 @@ export function useOfficeEmail() {
     };
 
     if (!window.Office) {
-      loadFromOffice();
-      return;
+      loadFromOffice({ allowPreview: true });
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (typeof window.Office.onReady === "function") {
@@ -207,6 +245,34 @@ export function useOfficeEmail() {
     } else {
       loadFromOffice();
     }
+
+    intervalId = window.setInterval(() => {
+      if (canUseOutlookItem()) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+        loadFromOffice();
+      }
+    }, 500);
+
+    timeoutId = window.setTimeout(() => {
+      if (!canUseOutlookItem() && !cancelled) {
+        setIsPreviewMode(false);
+        setIsReady(true);
+        setUserProfile(readUserProfile());
+        setError("Outlook no entrego el correo todavia. Cierra y vuelve a abrir BetterMail AI.");
+      }
+
+      if (intervalId) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    }, 10000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) window.clearInterval(intervalId);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
   }, [refreshEmail]);
 
   const commitHtml = useCallback(
@@ -223,7 +289,20 @@ export function useOfficeEmail() {
   );
 
   const replaceDraftWithText = useCallback(
-    async (improvedText) => {
+    async (improvedText, mode = "rewrite_draft") => {
+      if (mode === "suggest_reply" && !emailState.hasDraft && emailState.quotedHtml) {
+        const replyHtml = `${plainTextToOutlookHtml(improvedText, emailState.fullHtml)}<div><br></div><div><br></div>`;
+
+        if (!isPreviewMode) {
+          await prependBodyHtml(replyHtml);
+          await refreshEmail();
+          return;
+        }
+
+        setEmailState(getEmailStateFromHtml(`${replyHtml}${emailState.fullHtml || ""}`));
+        return;
+      }
+
       const finalHtml = buildFinalHtmlAfterReplace({
         improvedText,
         draftHtml: emailState.draftHtml,
@@ -233,7 +312,16 @@ export function useOfficeEmail() {
 
       await commitHtml(finalHtml);
     },
-    [commitHtml, emailState.draftHtml, emailState.quotedHtml, emailState.signatureHtml]
+    [
+      commitHtml,
+      emailState.draftHtml,
+      emailState.fullHtml,
+      emailState.hasDraft,
+      emailState.quotedHtml,
+      emailState.signatureHtml,
+      isPreviewMode,
+      refreshEmail,
+    ]
   );
 
   const insertBelowDraftText = useCallback(
