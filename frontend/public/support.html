@@ -3,49 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Support | BetterMail AI</title>
-    <style>
-      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #172033; background: #f7f8fb; line-height: 1.6; }
-      main { max-width: 880px; margin: 0 auto; padding: 48px 20px 72px; }
-      a { color: #1d4ed8; } h1 { font-size: 38px; line-height: 1.1; } h2 { margin-top: 34px; }
-      .card { background: #fff; border: 1px solid #e3e7ef; border-radius: 8px; padding: 28px; }
-      nav { margin-bottom: 24px; display: flex; gap: 18px; flex-wrap: wrap; }
-    </style>
+    <meta name="description" content="Centro de ayuda e instalacion de BetterMail AI para Outlook." />
+    <title>Soporte | BetterMail AI</title>
+    <link rel="stylesheet" href="/site-pages.css" />
   </head>
   <body>
+    <header class="site-header"><nav class="site-nav"><a class="site-brand" href="/"><img src="/addin-icons/icon-64.png" alt="" />BetterMail <strong>AI</strong></a><div class="site-links"><a href="/privacy">Privacidad</a><a href="/terms">Terminos</a><a class="site-cta" href="/install">Instalar</a></div></nav></header>
     <main>
-      <nav>
-        <a href="/">Home</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="/security">Security</a>
-      </nav>
-      <section class="card">
-        <h1>Support / Soporte</h1>
-        <p>BetterMail AI is an Outlook add-in that rewrites drafts and suggests professional replies while keeping the user in control.</p>
-
-        <h2>Install and open / Instalacion y apertura</h2>
-        <ol>
-          <li>Install BetterMail AI from Outlook Apps or AppSource when available.</li>
-          <li>Open a new email or reply in Outlook.</li>
-          <li>Open BetterMail AI from the compose window add-in menu.</li>
-        </ol>
-
-        <h2>Rewrite an email / Reescribir un correo</h2>
-        <p>Write a draft, choose a tone and let BetterMail AI generate a clearer version. You can replace the draft, insert the improved version below, copy it or regenerate it.</p>
-
-        <h2>Billing / Facturacion</h2>
-        <p>The trial includes limited free improvements. BetterMail Pro includes 300 improvements per 30-day billing period. Open the Pro card in Outlook to view plan status, cancel renewal at the end of the current period or reactivate it before expiration.</p>
-        <p>If a renewal payment is rejected, BetterMail displays a payment warning and provides a short grace period to update the payment method before Pro expires.</p>
-
-        <h2>FAQ</h2>
-        <p><strong>Does BetterMail AI send emails automatically?</strong> No. You choose when to apply or send text.</p>
-        <p><strong>Does it read my whole mailbox?</strong> No. It processes only the draft or context needed for the action you request.</p>
-        <p><strong>Can I delete my data?</strong> Yes. Send a request to support.</p>
-
-        <h2>Contact</h2>
-        <p>Email: <a href="mailto:gabriel.pacheco.developer@gmail.com">gabriel.pacheco.developer@gmail.com</a></p>
-      </section>
+      <section class="page-hero"><div class="page-hero-inner"><p class="page-kicker">Centro de ayuda</p><h1>Soporte de BetterMail AI</h1><p class="page-lead">Instalacion, uso, facturacion y solucion de problemas del complemento para Outlook.</p><div class="action-row"><a class="button-primary" href="/install">Ver instalacion</a><a class="button-secondary" href="mailto:gabriel.pacheco.developer@gmail.com">Contactar soporte</a></div></div></section>
+      <div class="page-layout">
+        <aside class="page-toc"><strong>Ayuda</strong><a href="#inicio">Comenzar</a><a href="#usar">Usar BetterMail</a><a href="#problemas">Problemas frecuentes</a><a href="#billing">Plan y pagos</a><a href="#datos">Datos y privacidad</a><a href="#contacto">Contacto</a></aside>
+        <article class="page-content">
+          <section id="inicio"><h2>Instalar y abrir</h2><p>BetterMail AI se encuentra en acceso anticipado mientras finaliza el proceso de Microsoft AppSource. Puedes instalarlo mediante el manifest oficial.</p><ol><li>Abre la <a href="/install">guia de instalacion manual</a> y descarga el manifest.</li><li>En Outlook, crea un correo y abre Aplicaciones.</li><li>Agrega una aplicacion personalizada desde archivo.</li><li>Selecciona `manifest.xml` y abre BetterMail AI.</li></ol><p class="notice">Si usas una cuenta administrada, tu organizacion puede bloquear instalaciones personalizadas. El administrador de Microsoft 365 debe autorizar o desplegar el complemento.</p></section>
+          <section id="usar"><h2>Usar BetterMail AI</h2><div class="support-grid"><article><h3>Mejorar un borrador</h3><p>Escribe en Outlook, abre BetterMail AI, selecciona el tono y revisa la propuesta.</p></article><article><h3>Sugerir una respuesta</h3><p>Abre Responder y deja el borrador vacio para usar el contexto del correo anterior.</p></article><article><h3>Aplicar el resultado</h3><p>Reemplaza el borrador, pon el resultado debajo o copialo. La firma y la cadena anterior se conservan.</p></article><article><h3>Mantener el control</h3><p>BetterMail AI nunca pulsa Enviar. Tu revisas, editas y envias desde Outlook.</p></article></div></section>
+          <section id="problemas"><h2>Problemas frecuentes</h2><h3>El panel no carga a la primera</h3><p>Cierra el panel, vuelve a abrirlo desde Aplicaciones y confirma que Outlook permite contenido de `bettermailai.web.app`.</p><h3>No detecta el texto nuevo</h3><p>Espera a que Outlook guarde el borrador y pulsa <strong>Actualizar</strong>. En respuestas, asegúrate de estar editando el cuadro de respuesta.</p><h3>Aparece un error al mejorar</h3><p>Comprueba tu conexion, intenta nuevamente y evita cerrar Outlook durante la solicitud. Si persiste, envia la hora aproximada, navegador y mensaje visible, sin copiar contenido confidencial.</p><h3>Reemplazar mueve la vista</h3><p>Actualiza Outlook y vuelve a probar. BetterMail AI intenta devolver el foco al texto actual despues de reemplazar.</p></section>
+          <section id="billing"><h2>Trial, Pro y pagos</h2><ul><li>El trial ofrece mejoras limitadas sin tarjeta.</li><li>BetterMail Pro cuesta USD 4.99 por 30 dias e incluye 300 mejoras.</li><li>PayPhone procesa el pago; BetterMail AI no almacena el numero completo ni el codigo de seguridad.</li><li>La activacion ocurre cuando PayPhone confirma la transaccion.</li></ul><h3>Cancelacion</h3><p>Solicita la cancelacion desde el correo asociado a BetterMail AI. El acceso continua hasta terminar el periodo pagado. Mientras PayPhone completa la habilitacion recurrente, algunas renovaciones pueden requerir pago manual.</p><h3>Pago aprobado pero Pro no aparece</h3><p>Vuelve a Outlook, enfoca el panel y pulsa Actualizar. Si no cambia, envia el correo de la cuenta, fecha, monto e identificador de transaccion. Nunca envies datos completos de tarjeta.</p></section>
+          <section id="datos"><h2>Privacidad y eliminacion</h2><p>BetterMail AI procesa solo el borrador o contexto que solicitas mejorar. No lee el buzon completo ni envia correos automaticamente. Consulta la <a href="/privacy">Politica de privacidad</a> para conocer proveedores, retencion y derechos.</p><p>Para solicitar acceso, correccion o eliminacion, escribe desde la cuenta afectada con el asunto <strong>Solicitud de privacidad - BetterMail AI</strong>. Podemos pedir una verificacion limitada de titularidad.</p></section>
+          <section id="contacto"><h2>Contactar soporte</h2><p>Email: <a href="mailto:gabriel.pacheco.developer@gmail.com">gabriel.pacheco.developer@gmail.com</a></p><p>Incluye version de Outlook, navegador, hora del problema, accion realizada y una captura sin datos privados. El objetivo de respuesta es de dos dias laborables, aunque casos de proveedores externos pueden tardar mas.</p><h3>English support</h3><p>English support is available by email. Include your Outlook version, browser, approximate time and the visible error. Do not send passwords, full card data or confidential email content.</p></section>
+        </article>
+      </div>
     </main>
+    <footer class="site-footer"><div class="site-footer-inner"><a class="site-brand" href="/"><img src="/addin-icons/icon-32.png" alt="" />BetterMail <strong>AI</strong></a><div class="site-footer-links"><a href="/privacy">Privacidad</a><a href="/terms">Terminos</a><a href="/security">Seguridad</a><a href="/contact">Contacto</a></div><span>© 2026 BetterMail AI</span></div></footer>
   </body>
 </html>

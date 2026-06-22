@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/prepare-public.js && vite build",
     "lint": "eslint .",
     "preview": "vite preview", 
     "build:frontend": "node scripts/build-frontend.js"

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Bolt,
@@ -123,9 +124,19 @@ function ProductMockup() {
 }
 
 export default function LandingPage() {
+  const [headerFixed, setHeaderFixed] = useState(false);
+
+  useEffect(() => {
+    const updateHeader = () => setHeaderFixed(window.scrollY > 24);
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+    return () => window.removeEventListener("scroll", updateHeader);
+  }, []);
+
   return (
     <main id="top" className="landing-page">
-      <header className="landing-header">
+      {headerFixed && <div className="landing-header-spacer" aria-hidden="true" />}
+      <header className={`landing-header ${headerFixed ? "is-fixed" : ""}`}>
         <nav className="landing-nav">
           <Logo />
           <div className="nav-links">
@@ -134,7 +145,7 @@ export default function LandingPage() {
             <a href="#precios">Precios</a>
             <a href="#faq">FAQ</a>
           </div>
-          <a className="nav-cta" href="/pricing">Probar gratis</a>
+          <a className="nav-cta" href="/install">Probar gratis</a>
         </nav>
       </header>
 
@@ -146,7 +157,7 @@ export default function LandingPage() {
             más claro, profesional y seguro.
           </p>
           <div className="hero-actions">
-            <a className="primary-button" href="/pricing"><Mail size={18} />Probar gratis en Outlook</a>
+            <a className="primary-button" href="/install"><Mail size={18} />Probar gratis en Outlook</a>
             <a className="secondary-button" href="#como-funciona">Ver cómo funciona</a>
           </div>
           <div className="hero-note"><SlidersHorizontal size={16} />Sin configuraciones complicadas. Sin curva de aprendizaje. Instalas, abres y mejoras tu correo.</div>
@@ -269,7 +280,7 @@ export default function LandingPage() {
             <h3>Gratis</h3>
             <strong>$0</strong>
             <p>Prueba BetterMail AI con un límite mensual de correos mejorados.</p>
-            <a href="/pricing">Empezar gratis</a>
+            <a href="/install">Empezar gratis</a>
           </article>
           <article className="price-card recommended">
             <span className="recommended-badge">Recomendado</span>
@@ -322,7 +333,7 @@ export default function LandingPage() {
           <h2>Convierte tus correos en mensajes profesionales</h2>
         </div>
         <p>Instala BetterMail AI y mejora tu redacción sin salir de Outlook.</p>
-        <a href="/pricing">Probar gratis <ArrowRight size={18} /></a>
+        <a href="/install">Probar gratis <ArrowRight size={18} /></a>
       </section>
 
       <footer className="landing-footer">

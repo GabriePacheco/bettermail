@@ -19,6 +19,7 @@ __pycache__/
 # Node / frontend
 frontend/node_modules/
 frontend/dist/
+frontend/public/manifest.xml
 frontend/dist-ssr/
 frontend/*.local
 

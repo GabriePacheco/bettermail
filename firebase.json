@@ -71,6 +71,10 @@
         "destination": "/pricing.html"
       },
       {
+        "source": "/install",
+        "destination": "/install.html"
+      },
+      {
         "source": "/internal-admin",
         "destination": "/admin.html"
       },
