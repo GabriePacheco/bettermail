@@ -1,6 +1,6 @@
 import unittest
 
-from app.openai_service import calculate_openai_cost
+from app.openai_service import build_user_prompt, calculate_openai_cost
 
 
 class OpenAICostTests(unittest.TestCase):
@@ -39,6 +39,29 @@ class OpenAICostTests(unittest.TestCase):
         )
 
         self.assertEqual(cost, 0.00001)
+
+    def test_compose_mode_builds_a_complete_email_from_rough_ideas(self):
+        prompt = build_user_prompt(
+            text="necesito el informe para manana",
+            tone_description="profesional y claro",
+            mode="compose_email",
+            context=None,
+        )
+
+        self.assertIn("Redacta un correo completo", prompt)
+        self.assertIn("borrador de ideas", prompt)
+        self.assertIn("saludo neutro", prompt)
+
+    def test_regeneration_requests_a_distinct_alternative(self):
+        prompt = build_user_prompt(
+            text="necesito el informe",
+            tone_description="profesional",
+            mode="compose_email",
+            context=None,
+            variation=2,
+        )
+
+        self.assertIn("alternativa claramente distinta", prompt)
 
 
 if __name__ == "__main__":

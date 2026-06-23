@@ -52,7 +52,19 @@ def get_client():
     return OpenAI(api_key=settings.openai_api_key)
 
 
-def build_user_prompt(text: str, tone_description: str, mode: str, context: str | None):
+def build_user_prompt(
+    text: str,
+    tone_description: str,
+    mode: str,
+    context: str | None,
+    variation: int = 0,
+):
+    variation_rule = (
+        "- Genera una alternativa claramente distinta a propuestas anteriores: cambia estructura y redaccion sin cambiar hechos ni intencion."
+        if variation > 0
+        else ""
+    )
+
     if mode == "suggest_reply":
         return f"""
 Genera una respuesta profesional usando el contexto del correo anterior.
@@ -66,11 +78,36 @@ Reglas obligatorias:
 - Si el contexto contiene enojo, insultos o agresividad verbal no fisica, responde con una version profesional, firme, respetuosa y segura.
 - No incluyas amenazas, violencia, insultos, acoso, crimen ni acusaciones legales no sustentadas.
 - Devuelve unicamente la respuesta sugerida, sin explicaciones, sin markdown y sin comillas.
--Ten en mente un correo completo, con saludo, cuerpo y despedida, aunque el texto original solo tenga el cuerpo del correo.
+- Escribe un correo completo, con saludo, cuerpo bien organizado y despedida natural.
+{variation_rule}
 
 Contexto del correo anterior:
 \"\"\"
 {context or ""}
+\"\"\"
+""".strip()
+
+    if mode == "compose_email":
+        return f"""
+Redacta un correo completo y profesional a partir de las ideas del usuario.
+
+Reglas obligatorias:
+- Trata el texto como un borrador de ideas, no como una estructura que debas copiar literalmente.
+- Conserva todos los hechos, nombres, cifras, fechas, solicitudes y limites incluidos.
+- No inventes destinatarios, hechos, promesas, fechas ni compromisos.
+- Mejora de forma sustancial claridad, orden, gramatica, naturalidad y fuerza comunicativa.
+- Organiza el correo con saludo neutro si falta, cuerpo en parrafos claros y despedida profesional si falta.
+- Se concreto: amplia solo lo necesario para que el mensaje quede completo y listo para revisar.
+- Manten el idioma original.
+- Usa un tono: {tone_description}.
+- Convierte enojo o agresividad verbal no fisica en comunicacion firme, respetuosa y segura.
+- No conserves amenazas, violencia, insultos, acoso ni acusaciones legales inventadas.
+- Devuelve unicamente el correo redactado, sin explicaciones, markdown ni comillas.
+{variation_rule}
+
+Ideas o borrador original:
+\"\"\"
+{text}
 \"\"\"
 """.strip()
 
@@ -98,7 +135,7 @@ Reglas obligatorias:
 - No hagas acusaciones legales no sustentadas.
 - Si el usuario pide conservar o ejecutar dano real, crimen, acoso dirigido o amenaza directa, rechaza brevemente y ofrece una alternativa profesional segura.
 - Devuelve unicamente el texto reescrito, sin explicaciones, sin markdown y sin comillas.
--Ten en mente un correo completo, con saludo, cuerpo y despedida, aunque el texto original solo tenga el cuerpo del correo.
+{variation_rule}
 
 Texto original:
 \"\"\"
@@ -112,6 +149,7 @@ def rewrite_email_text(
     tone: str,
     mode: str = "rewrite_draft",
     context: str | None = None,
+    variation: int = 0,
 ):
     settings = get_settings()
     client = get_client()
@@ -137,10 +175,11 @@ def rewrite_email_text(
                     tone_description=tone_description,
                     mode=normalized_mode,
                     context=context,
+                    variation=variation,
                 ),
             },
         ],
-        temperature=0.5,
+        temperature=0.7 if variation > 0 else 0.5,
     )
 
     rewritten_text = response.choices[0].message.content

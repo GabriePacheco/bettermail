@@ -298,20 +298,30 @@ export async function rewriteEmail({
   source = "outlook_addin",
   mode = "rewrite_draft",
   context,
+  variation = 0,
 }) {
   const apiBaseUrl = requireApiBaseUrl();
-  const response = await fetch(`${apiBaseUrl}/rewrite`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify({
-      user,
-      text: text || "",
-      tone,
-      source,
-      mode,
-      context,
-    }),
-  });
+  let response;
+
+  try {
+    response = await fetch(`${apiBaseUrl}/rewrite`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        user,
+        text: text || "",
+        tone,
+        source,
+        mode,
+        context,
+        variation,
+      }),
+    });
+  } catch {
+    throw new Error(
+      "No pudimos conectar con BetterMail AI. Revisa tu conexion e intenta nuevamente.",
+    );
+  }
 
   if (!response.ok) {
     let message = "No se pudo reescribir el correo.";

@@ -28,6 +28,7 @@ class RewriteRequest(BaseModel):
     source: Literal["outlook_addin"] = "outlook_addin"
     mode: str = "rewrite_draft"
     context: Optional[str] = None
+    variation: int = Field(default=0, ge=0, le=20)
 
 
 class RewriteResponse(BaseModel):

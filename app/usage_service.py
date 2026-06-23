@@ -1,7 +1,11 @@
+import logging
 from datetime import datetime, timezone
 
 from google.cloud import firestore as google_firestore
 from app.firebase_service import get_or_create_mailbox_user, register_usage
+
+
+logger = logging.getLogger(__name__)
 
 
 def _as_int(value, default=0):
@@ -188,11 +192,14 @@ def consume_rewrite_credit(user, usage_info: dict, metadata: dict):
             "trialUsed": google_firestore.Increment(1)
         })
 
-    register_usage(user.email, {
-        **metadata,
-        "plan": usage_info.get("plan", "trial"),
-        "usageBucket": usage_bucket,
-    })
+    try:
+        register_usage(user.email, {
+            **metadata,
+            "plan": usage_info.get("plan", "trial"),
+            "usageBucket": usage_bucket,
+        })
+    except Exception:
+        logger.exception("Rewrite usage telemetry failed")
 
     used_after = usage_info["used"] + 1
     remaining_after = max(usage_info["limit"] - used_after, 0)

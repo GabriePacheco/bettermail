@@ -74,6 +74,8 @@ export default function Taskpane() {
     upgradeRequired: false,
   });
   const autoRewriteTextRef = useRef("");
+  const lastSourcePayloadRef = useRef(null);
+  const variationRef = useRef(0);
   const proPlan = useMemo(
     () => plans.find((plan) => plan.id === "pro_monthly"),
     [plans]
@@ -88,7 +90,7 @@ export default function Taskpane() {
   const getRewritePayload = useCallback(() => {
     if (isMeaningfulText(draftText)) {
       return {
-        mode: "rewrite_draft",
+        mode: isReply ? "rewrite_draft" : "compose_email",
         text: draftText,
         context: undefined,
       };
@@ -129,8 +131,10 @@ export default function Taskpane() {
     };
   }, [draftText, isReply, quotedText]);
 
-  const handleRewrite = useCallback(async () => {
-    const payload = getRewritePayload();
+  const handleRewrite = useCallback(async ({ regenerate = false } = {}) => {
+    const payload = regenerate
+      ? lastSourcePayloadRef.current || getRewritePayload()
+      : getRewritePayload();
 
     if (!payload) {
       setInfoMessage("Escribe un texto en el correo para poder mejorarlo.");
@@ -142,16 +146,20 @@ export default function Taskpane() {
       setActionError("");
       setInfoMessage("");
 
+      const variation = regenerate ? variationRef.current + 1 : 0;
       const data = await rewriteEmail({
         text: payload.text,
         tone: selectedTone,
         user: userProfile,
         mode: payload.mode,
         context: payload.context,
+        variation,
       });
 
       setImprovedText(data.improvedText || "");
       setLastRewriteMode(payload.mode);
+      lastSourcePayloadRef.current = payload;
+      variationRef.current = variation;
 
       if (data.usage) {
         setUsage(data.usage);
@@ -165,6 +173,10 @@ export default function Taskpane() {
       setLoading(false);
     }
   }, [getRewritePayload, selectedTone, userProfile]);
+
+  const handleRegenerate = useCallback(() => {
+    handleRewrite({ regenerate: true });
+  }, [handleRewrite]);
 
   const refreshUsage = useCallback(async () => {
     if (!userProfile?.email) return;
@@ -279,6 +291,8 @@ export default function Taskpane() {
       await refreshEmail();
       setImprovedText("");
       autoRewriteTextRef.current = "";
+      lastSourcePayloadRef.current = null;
+      variationRef.current = 0;
     } catch (err) {
       setActionError(err.message || "No se pudo actualizar.");
     }
@@ -362,7 +376,7 @@ export default function Taskpane() {
           onReplace={handleReplace}
           onInsertBelow={handleInsertBelow}
           onCopy={handleCopy}
-          onRegenerate={handleRewrite}
+          onRegenerate={handleRegenerate}
         />
 
         <section className={`outlook-source bm-card outlook-source-${compactOutlookStatus.type}`}>

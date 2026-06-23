@@ -1,4 +1,5 @@
 import os
+import logging
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
@@ -10,6 +11,7 @@ from app.security import hash_email, normalize_email
 
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 def init_firebase():
@@ -99,30 +101,33 @@ def register_usage(email: str, payload: dict):
     if "openaiTotalTokens" not in payload:
         return
 
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    db.collection("operational_metrics").document(f"openai_{day}").set(
-        {
-            "date": day,
-            "provider": "openai",
-            "requests": google_firestore.Increment(1),
-            "promptTokens": google_firestore.Increment(
-                int(payload.get("openaiPromptTokens", 0))
-            ),
-            "cachedPromptTokens": google_firestore.Increment(
-                int(payload.get("openaiCachedPromptTokens", 0))
-            ),
-            "completionTokens": google_firestore.Increment(
-                int(payload.get("openaiCompletionTokens", 0))
-            ),
-            "totalTokens": google_firestore.Increment(
-                int(payload.get("openaiTotalTokens", 0))
-            ),
-            "estimatedCostUsd": google_firestore.Increment(
-                float(payload.get("openaiEstimatedCostUsd", 0))
-            ),
-            "model": payload.get("model"),
-            "pricingLabel": payload.get("openaiPricingLabel"),
-            "updatedAt": SERVER_TIMESTAMP,
-        },
-        merge=True,
-    )
+    try:
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        db.collection("operational_metrics").document(f"openai_{day}").set(
+            {
+                "date": day,
+                "provider": "openai",
+                "requests": firestore.Increment(1),
+                "promptTokens": firestore.Increment(
+                    int(payload.get("openaiPromptTokens", 0))
+                ),
+                "cachedPromptTokens": firestore.Increment(
+                    int(payload.get("openaiCachedPromptTokens", 0))
+                ),
+                "completionTokens": firestore.Increment(
+                    int(payload.get("openaiCompletionTokens", 0))
+                ),
+                "totalTokens": firestore.Increment(
+                    int(payload.get("openaiTotalTokens", 0))
+                ),
+                "estimatedCostUsd": firestore.Increment(
+                    float(payload.get("openaiEstimatedCostUsd", 0))
+                ),
+                "model": payload.get("model"),
+                "pricingLabel": payload.get("openaiPricingLabel"),
+                "updatedAt": SERVER_TIMESTAMP,
+            },
+            merge=True,
+        )
+    except Exception:
+        logger.exception("OpenAI daily metrics aggregation failed")

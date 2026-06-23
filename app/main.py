@@ -54,8 +54,10 @@ from app.plans_service import list_plans
 
 import socket
 import os
+import logging
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -175,6 +177,21 @@ def billing_checkout(request: Request, payload: CheckoutRequest):
         plan_id=payload.plan_id,
         provider=payload.provider,
         source=payload.source,
+    )
+
+
+@app.exception_handler(Exception)
+async def unexpected_error_handler(request: Request, exc: Exception):
+    logger.error(
+        "Unhandled API error on %s",
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "No pudimos completar la solicitud en este momento. Intenta nuevamente."
+        },
     )
 
 
@@ -367,6 +384,7 @@ def rewrite(request: Request, payload: RewriteRequest):
         tone=payload.tone,
         mode=payload.mode,
         context=payload.context,
+        variation=payload.variation,
     )
 
     usage_after = consume_rewrite_credit(
