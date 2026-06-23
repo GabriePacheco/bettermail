@@ -1,6 +1,11 @@
 import unittest
 
-from app.openai_service import build_user_prompt, calculate_openai_cost
+from app.openai_service import (
+    build_user_prompt,
+    calculate_openai_cost,
+    is_refusal_response,
+    safe_professional_fallback,
+)
 
 
 class OpenAICostTests(unittest.TestCase):
@@ -62,6 +67,33 @@ class OpenAICostTests(unittest.TestCase):
         )
 
         self.assertIn("alternativa claramente distinta", prompt)
+
+    def test_detects_the_refusal_seen_in_outlook(self):
+        self.assertTrue(
+            is_refusal_response(
+                "No es apropiado continuar con este tipo de lenguaje. "
+                "Puedo ayudarte a redactar un mensaje profesional."
+            )
+        )
+
+    def test_physical_threat_is_treated_as_material_to_neutralize(self):
+        prompt = build_user_prompt(
+            text="Manos te van a faltar para pelarme la verga",
+            tone_description="profesional, claro y respetuoso",
+            mode="compose_email",
+            context=None,
+        )
+
+        self.assertIn("eliminalas por completo", prompt)
+        self.assertIn("No rechaces", prompt)
+
+    def test_spanish_threat_gets_a_spanish_safe_fallback(self):
+        fallback = safe_professional_fallback(
+            "Manos te van a faltar para pelarme la verga"
+        )
+
+        self.assertTrue(fallback.startswith("Necesito expresar"))
+        self.assertNotIn("manos", fallback.lower())
 
 
 if __name__ == "__main__":
