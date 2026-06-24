@@ -3,8 +3,11 @@ import unittest
 from app.openai_service import (
     build_user_prompt,
     calculate_openai_cost,
+    is_complete_email,
     is_refusal_response,
+    is_rough_draft,
     safe_professional_fallback,
+    source_requires_safety_transform,
 )
 
 
@@ -92,8 +95,32 @@ class OpenAICostTests(unittest.TestCase):
             "Manos te van a faltar para pelarme la verga"
         )
 
-        self.assertTrue(fallback.startswith("Necesito expresar"))
+        self.assertTrue(fallback.startswith("Estimado/a"))
         self.assertNotIn("manos", fallback.lower())
+        self.assertIn("no estoy de acuerdo", fallback.lower())
+        self.assertNotIn("asunto importante", fallback.lower())
+        self.assertNotIn("solicitudes", fallback.lower())
+        self.assertTrue(is_complete_email(fallback))
+
+        plural_fallback = safe_professional_fallback(
+            "Todos ustedes me pelan la verga"
+        )
+        self.assertTrue(plural_fallback.startswith("Estimados"))
+
+    def test_hostile_insult_uses_the_safety_email_flow(self):
+        self.assertTrue(
+            source_requires_safety_transform("Todos ustedes me pelan la verga")
+        )
+
+    def test_short_generic_sentence_is_not_accepted_as_a_complete_email(self):
+        self.assertFalse(
+            is_complete_email(
+                "Les solicito su atencion para tratar un asunto importante."
+            )
+        )
+
+    def test_short_outlook_draft_is_expanded_as_a_complete_email(self):
+        self.assertTrue(is_rough_draft("necesito el informe para manana"))
 
 
 if __name__ == "__main__":

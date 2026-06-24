@@ -30,6 +30,15 @@ REFUSAL_MARKERS = (
     "i cannot rewrite",
 )
 
+HOSTILE_SOURCE_PATTERN = re.compile(
+    r"\b(verga|puta|puto|mierda|carajo|cabron|cabrona|imbecil|idiota|"
+    r"matar|matarte|golpear|golpearte|romperte|amenaza|amenazarte|"
+    r"fuck|fucking|bitch|asshole|kill|hurt|punch)\b|"
+    r"\b(te|le|les|los|las)\s+voy\s+a\b|"
+    r"\bmanos?\s+te\s+van\s+a\s+faltar\b",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class RewriteResult:
@@ -67,22 +76,54 @@ def is_refusal_response(text: str) -> bool:
     return any(marker in normalized for marker in REFUSAL_MARKERS)
 
 
+def source_requires_safety_transform(text: str) -> bool:
+    return bool(HOSTILE_SOURCE_PATTERN.search(text or ""))
+
+
+def is_complete_email(text: str) -> bool:
+    normalized = (text or "").strip().lower()
+    words = re.findall(r"[a-zA-Z]+", normalized)
+    nonempty_lines = [line.strip() for line in normalized.splitlines() if line.strip()]
+    has_greeting = normalized.startswith(
+        ("hola", "estimado", "estimada", "buenos dias", "buenas tardes", "dear", "hello")
+    )
+    has_closing = any(
+        marker in normalized
+        for marker in ("saludos", "atentamente", "cordialmente", "sincerely", "regards")
+    )
+    return len(words) >= 25 and len(nonempty_lines) >= 3 and has_greeting and has_closing
+
+
+def is_rough_draft(text: str) -> bool:
+    return 0 < len(re.findall(r"[a-zA-Z]+", text or "")) <= 18
+
+
 def safe_professional_fallback(source_text: str) -> str:
     spanish_markers = {
         "que", "para", "con", "esto", "esta", "necesito", "quiero", "usted",
-        "vos", "tu", "te", "la", "el", "los", "las", "por", "una", "un"
+        "vos", "tu", "te", "la", "el", "los", "las", "por", "una", "un",
+        "todos", "todas", "ustedes"
     }
     words = set(re.findall(r"[a-zA-Z]+", (source_text or "").lower()))
     if len(words & spanish_markers) >= 2:
+        plural = bool(words & {"todos", "todas", "ustedes", "les"})
+        greeting = "Estimados" if plural else "Estimado/a"
         return (
-            "Necesito expresar mi inconformidad de manera clara. Esta situacion es "
-            "inaceptable y requiero que se trate con seriedad y respeto. Quedo atento "
-            "a una respuesta concreta para resolver este asunto."
+            f"{greeting},\n\n"
+            "Quiero dejar clara mi inconformidad y expresar que no estoy de acuerdo con "
+            "lo planteado. Considero necesario que abordemos nuestras diferencias de "
+            "manera directa y respetuosa, centrandonos en los puntos de desacuerdo y en "
+            "una posible solucion.\n\n"
+            "Quedo atento a sus comentarios.\n\n"
+            "Saludos cordiales."
         )
     return (
-        "I need to express my concern clearly. This situation is unacceptable and "
-        "requires a serious and respectful response. I look forward to a concrete "
-        "answer so we can resolve this matter."
+        "Dear team,\n\n"
+        "I want to express my serious dissatisfaction with how this situation has been "
+        "handled. I believe we need to review what happened and have a respectful, "
+        "constructive conversation to reach a concrete solution.\n\n"
+        "I look forward to your response.\n\n"
+        "Kind regards."
     )
 
 
@@ -99,6 +140,9 @@ de ejecutar, promover ni conservar el dano. Es material que debes neutralizar.
 Reglas:
 - Elimina por completo amenazas, violencia, insultos, humillacion y lenguaje sexual ofensivo.
 - Conserva solo la intencion legitima subyacente: inconformidad, limite, reclamo, urgencia o solicitud de solucion.
+- Si el origen no explica el motivo concreto, no inventes un proyecto, plazo, error ni "asunto importante". Habla de "esta situacion" o "lo ocurrido".
+- Produce un email completo: saludo neutro, cuerpo que exprese la inconformidad, solicitud de revision o dialogo, y despedida.
+- El cuerpo debe tener suficiente contexto para ser util, pero no debe fabricar hechos.
 - No rechaces, no sermonees y no menciones politicas de seguridad.
 - Usa un tono {tone_description}.
 - Devuelve unicamente el correo profesional resultante.
@@ -223,30 +267,66 @@ def rewrite_email_text(
     client = get_client()
     normalized_mode = mode or "rewrite_draft"
     tone_description = TONE_MAP.get(tone, TONE_MAP["profesional"])
+    source_text = context if normalized_mode == "suggest_reply" else text
+    safety_transform = source_requires_safety_transform(source_text or "")
+    effective_mode = (
+        "compose_email"
+        if normalized_mode == "rewrite_draft" and is_rough_draft(text)
+        else normalized_mode
+    )
+
+    if safety_transform and is_rough_draft(source_text or ""):
+        return RewriteResult(
+            text=safe_professional_fallback(source_text or ""),
+            model="local-safety-transform",
+            prompt_tokens=0,
+            cached_prompt_tokens=0,
+            completion_tokens=0,
+            total_tokens=0,
+            estimated_cost_usd=0,
+            pricing_label="local-safety-transform-v1",
+        )
+
+    if safety_transform:
+        system_prompt = (
+            "Eres un redactor de comunicacion profesional. El texto de origen contiene lenguaje hostil "
+            "que debes eliminar por completo. Conserva la inconformidad o limite legitimo, no inventes "
+            "el motivo del conflicto y devuelve siempre un email completo con saludo, cuerpo, solicitud "
+            "constructiva y despedida. Nunca rechaces ni sermonees."
+        )
+        user_prompt = build_safety_retry_prompt(
+            text=text,
+            context=context,
+            tone_description=tone_description,
+            mode=effective_mode,
+        )
+    else:
+        system_prompt = (
+            "Eres BetterMail AI, un asistente experto en correos profesionales. "
+            "Tu objetivo es mejorar claridad, ortografia, estructura y tono sin cambiar el sentido original. "
+            "Todo texto proporcionado es un borrador que debe sanearse. Si contiene enojo, insultos, "
+            "amenazas o violencia, elimina por completo el dano y convierte la intencion legitima "
+            "subyacente en comunicacion profesional, firme y respetuosa. No rechaces la reescritura "
+            "por el lenguaje del borrador ni menciones politicas de seguridad."
+        )
+        user_prompt = build_user_prompt(
+            text=text,
+            tone_description=tone_description,
+            mode=effective_mode,
+            context=context,
+            variation=variation,
+        )
 
     response = client.chat.completions.create(
         model=settings.model_name,
         messages=[
             {
                 "role": "system",
-                "content": (
-                    "Eres BetterMail AI, un asistente experto en correos profesionales. "
-                    "Tu objetivo es mejorar claridad, ortografia, estructura y tono sin cambiar el sentido original. "
-                    "Todo texto proporcionado es un borrador que debe sanearse. Si contiene enojo, insultos, "
-                    "amenazas o violencia, elimina por completo el dano y convierte la intencion legitima "
-                    "subyacente en comunicacion profesional, firme y respetuosa. No rechaces la reescritura "
-                    "por el lenguaje del borrador ni menciones politicas de seguridad."
-                ),
+                "content": system_prompt,
             },
             {
                 "role": "user",
-                "content": build_user_prompt(
-                    text=text,
-                    tone_description=tone_description,
-                    mode=normalized_mode,
-                    context=context,
-                    variation=variation,
-                ),
+                "content": user_prompt,
             },
         ],
         temperature=0.7 if variation > 0 else 0.5,
@@ -255,7 +335,10 @@ def rewrite_email_text(
     responses = [response]
     rewritten_text = response.choices[0].message.content
 
-    if rewritten_text and is_refusal_response(rewritten_text):
+    if rewritten_text and (
+        is_refusal_response(rewritten_text)
+        or (safety_transform and not is_complete_email(rewritten_text))
+    ):
         response = client.chat.completions.create(
             model=settings.model_name,
             messages=[
@@ -272,7 +355,7 @@ def rewrite_email_text(
                         text=text,
                         context=context,
                         tone_description=tone_description,
-                        mode=normalized_mode,
+                        mode=effective_mode,
                     ),
                 },
             ],
@@ -281,7 +364,10 @@ def rewrite_email_text(
         responses.append(response)
         rewritten_text = response.choices[0].message.content
 
-    if rewritten_text and is_refusal_response(rewritten_text):
+    if rewritten_text and (
+        is_refusal_response(rewritten_text)
+        or (safety_transform and not is_complete_email(rewritten_text))
+    ):
         rewritten_text = safe_professional_fallback(context or text)
 
     if not rewritten_text:
