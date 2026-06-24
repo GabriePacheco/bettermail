@@ -10,6 +10,8 @@ export default function EmailCard({
   readOnly = true,
   status = "default",
   helperText = "",
+  headerAction = null,
+  footer = null,
 }) {
   const isImproved = status === "success";
   const badgeIsElement = isValidElement(badge);
@@ -25,9 +27,9 @@ export default function EmailCard({
           {title}
         </div>
 
-        {badge && badgeIsElement && badge}
+        {headerAction || (badge && badgeIsElement && badge)}
 
-        {badge && !badgeIsElement && (
+        {!headerAction && badge && !badgeIsElement && (
           <div className={`email-card-badge ${isImproved ? "generated-badge" : ""}`}>
             {isImproved && <CheckCircle2 size={14} />}
             {badge}
@@ -46,6 +48,8 @@ export default function EmailCard({
       />
 
       {helperText && <p className="email-card-helper">{helperText}</p>}
+
+      {footer && <div className="email-card-footer">{footer}</div>}
     </section>
   );
 }

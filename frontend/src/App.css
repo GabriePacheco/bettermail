@@ -207,100 +207,6 @@ button {
   color: #fca5a5;
 }
 
-.outlook-source {
-  padding: 7px 8px;
-}
-
-.outlook-source-row {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.outlook-source-copy {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--bm-text-secondary);
-}
-
-.outlook-source-copy p {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.outlook-source-icon {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 6px;
-  background: var(--bm-bg-muted);
-  color: var(--bm-text-secondary);
-}
-
-.outlook-source-success {
-  border-color: var(--bm-border);
-}
-
-.outlook-source-success .outlook-source-copy,
-.outlook-source-success .outlook-source-icon {
-  color: var(--bm-text-secondary);
-}
-
-.outlook-source-success .outlook-source-icon {
-  background: var(--bm-bg-muted);
-}
-
-[data-theme="dark"] .outlook-source-success {
-  border-color: var(--bm-border);
-}
-
-[data-theme="dark"] .outlook-source-success .outlook-source-icon {
-  background: var(--bm-accent-soft);
-}
-
-.outlook-refresh {
-  border-color: var(--bm-border);
-  background: var(--bm-bg-muted);
-  color: var(--bm-text-secondary);
-  min-height: 28px;
-}
-
-.outlook-source-details {
-  margin-top: 6px;
-  padding-left: 29px;
-  color: var(--bm-text-secondary);
-  font-size: 10.5px;
-  line-height: 1.35;
-}
-
-.outlook-source-details summary {
-  width: fit-content;
-  cursor: pointer;
-  color: var(--bm-text-secondary);
-  font-weight: 700;
-}
-
-.outlook-source-details p {
-  margin: 5px 0 0;
-  padding: 6px 7px;
-  border: 1px solid var(--bm-border);
-  border-radius: 6px;
-  background: var(--bm-bg-muted);
-  white-space: pre-wrap;
-}
-
 .tone-card {
   border: 0;
   border-radius: 0;
@@ -520,6 +426,12 @@ button {
   cursor: pointer;
 }
 
+.improved-refresh {
+  border-color: var(--bm-border);
+  background: var(--bm-bg-muted);
+  color: var(--bm-text-secondary);
+}
+
 .refresh-badge svg,
 .email-card-badge svg {
   width: 12px;
@@ -565,6 +477,68 @@ button {
   color: var(--bm-text-secondary);
   font-size: 10.5px;
   line-height: 1.3;
+}
+
+.email-card-footer {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--bm-border);
+}
+
+.email-source-footer {
+  position: relative;
+  min-width: 0;
+  min-height: 24px;
+  color: var(--bm-text-secondary);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.email-source-details summary,
+.email-source-empty {
+  min-width: 0;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-right: 104px;
+  font-weight: 700;
+}
+
+.email-source-details summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.email-source-details summary::marker {
+  color: var(--bm-text-secondary);
+}
+
+.email-source-details summary svg,
+.email-source-empty svg {
+  flex: 0 0 auto;
+}
+
+.email-source-details p {
+  max-height: 92px;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding: 7px 0 1px;
+  border-top: 1px solid var(--bm-border);
+  white-space: pre-wrap;
+}
+
+.generated-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--bm-text-secondary);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .improved-card {

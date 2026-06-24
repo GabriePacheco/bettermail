@@ -353,12 +353,51 @@ export default function Taskpane() {
 
         <EmailCard
           title="Mejorado"
-          badge="Generado por IA"
           icon={Sparkles}
           value={improvedText}
           onChange={setImprovedText}
           readOnly={false}
           status="success"
+          headerAction={(
+            <button
+              type="button"
+              onClick={handleRefreshFromOutlook}
+              className="refresh-badge improved-refresh"
+              title="Actualizar texto desde Outlook"
+            >
+              <RefreshCw size={14} />
+              Actualizar
+            </button>
+          )}
+          footer={(
+            <div className={`email-source-footer email-source-${compactOutlookStatus.type}`}>
+              {compactOutlookStatus.detail ? (
+                <details className="email-source-details">
+                  <summary>
+                    {compactOutlookStatus.type === "success" ? (
+                      <CheckCircle2 size={14} />
+                    ) : (
+                      <Mail size={14} />
+                    )}
+                    {compactOutlookStatus.type === "context"
+                      ? "Ver contexto detectado"
+                      : "Ver texto detectado"}
+                  </summary>
+                  <p>{limitText(compactOutlookStatus.detail, 280)}</p>
+                </details>
+              ) : (
+                <div className="email-source-empty">
+                  <Mail size={14} />
+                  <span>{compactOutlookStatus.text}</span>
+                </div>
+              )}
+
+              <span className="generated-indicator">
+                <CheckCircle2 size={12} />
+                Generado por IA
+              </span>
+            </div>
+          )}
         />
 
         {actionError && (
@@ -378,37 +417,6 @@ export default function Taskpane() {
           onCopy={handleCopy}
           onRegenerate={handleRegenerate}
         />
-
-        <section className={`outlook-source bm-card outlook-source-${compactOutlookStatus.type}`}>
-          <div className="outlook-source-row">
-            <div className="outlook-source-copy">
-              <span className="outlook-source-icon" aria-hidden="true">
-                {compactOutlookStatus.type === "success" ? (
-                  <CheckCircle2 size={16} />
-                ) : (
-                  <Mail size={16} />
-                )}
-              </span>
-              <p>{compactOutlookStatus.text}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleRefreshFromOutlook}
-              className="refresh-badge outlook-refresh"
-            >
-              <RefreshCw size={14} />
-              Actualizar
-            </button>
-          </div>
-
-          {compactOutlookStatus.detail && (
-            <details className="outlook-source-details">
-              <summary>Ver texto detectado</summary>
-              <p>{limitText(compactOutlookStatus.detail, 280)}</p>
-            </details>
-          )}
-        </section>
 
         <PlanFooter
           used={usage.used}
