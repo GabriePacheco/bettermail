@@ -432,6 +432,11 @@ button {
   color: var(--bm-text-secondary);
 }
 
+.improved-refresh:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .refresh-badge svg,
 .email-card-badge svg {
   width: 12px;
@@ -501,8 +506,12 @@ button {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding-right: 104px;
   font-weight: 700;
+}
+
+.email-source-footer.has-generated-indicator .email-source-details summary,
+.email-source-footer.has-generated-indicator .email-source-empty {
+  padding-right: 104px;
 }
 
 .email-source-details summary {

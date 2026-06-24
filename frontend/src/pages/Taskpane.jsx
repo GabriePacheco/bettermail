@@ -60,6 +60,7 @@ export default function Taskpane() {
   const [selectedTone, setSelectedTone] = useState("profesional");
   const [improvedText, setImprovedText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refreshingOutlook, setRefreshingOutlook] = useState(false);
   const [actionError, setActionError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const [lastRewriteMode, setLastRewriteMode] = useState("rewrite_draft");
@@ -286,6 +287,7 @@ export default function Taskpane() {
 
   const handleRefreshFromOutlook = async () => {
     try {
+      setRefreshingOutlook(true);
       setActionError("");
       setInfoMessage("");
       await refreshEmail();
@@ -295,6 +297,8 @@ export default function Taskpane() {
       variationRef.current = 0;
     } catch (err) {
       setActionError(err.message || "No se pudo actualizar.");
+    } finally {
+      setRefreshingOutlook(false);
     }
   };
 
@@ -363,14 +367,20 @@ export default function Taskpane() {
               type="button"
               onClick={handleRefreshFromOutlook}
               className="refresh-badge improved-refresh"
-              title="Actualizar texto desde Outlook"
+              title={refreshingOutlook ? "Actualizando texto" : "Actualizar texto desde Outlook"}
+              disabled={refreshingOutlook}
+              aria-busy={refreshingOutlook}
             >
-              <RefreshCw size={14} />
+              <RefreshCw className={refreshingOutlook ? "spin-icon" : ""} size={14} />
               Actualizar
             </button>
           )}
           footer={(
-            <div className={`email-source-footer email-source-${compactOutlookStatus.type}`}>
+            <div
+              className={`email-source-footer email-source-${compactOutlookStatus.type} ${
+                hasImproved ? "has-generated-indicator" : ""
+              }`}
+            >
               {compactOutlookStatus.detail ? (
                 <details className="email-source-details">
                   <summary>
@@ -392,10 +402,12 @@ export default function Taskpane() {
                 </div>
               )}
 
-              <span className="generated-indicator">
-                <CheckCircle2 size={12} />
-                Generado por IA
-              </span>
+              {hasImproved && (
+                <span className="generated-indicator">
+                  <CheckCircle2 size={12} />
+                  Generado por IA
+                </span>
+              )}
             </div>
           )}
         />
