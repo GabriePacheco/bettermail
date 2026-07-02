@@ -11,6 +11,7 @@ import {
   Sparkles,
   Sun,
   User,
+  WandSparkles,
 } from "lucide-react";
 
 import {
@@ -20,6 +21,7 @@ import {
   rewriteEmail,
 } from "../api/bettermailApi";
 import ActionButtons from "../components/ActionButtons";
+import CustomToneDialog from "../components/CustomToneDialog";
 import EmailCard from "../components/EmailCard";
 import PlanFooter from "../components/PlanFooter";
 import TonePills from "../components/TonePills";
@@ -40,12 +42,49 @@ const toneOptions = [
   { value: "diplomatico", label: "Elegante", compactLabel: "Eleg.", icon: Gem },
 ];
 
+const DEFAULT_TONE_KEY = "bettermail.defaultTone.v1";
+const CUSTOM_TONE_KEY = "bettermail.customTone.v1";
+const BUILT_IN_TONES = new Set(toneOptions.map((tone) => tone.value));
+
+function readLocalPreference(key, fallback) {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveLocalPreference(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Outlook can disable local storage in restricted WebViews.
+  }
+}
+
+function readCustomTonePreference() {
+  const stored = readLocalPreference(CUSTOM_TONE_KEY, null);
+  return {
+    name:
+      typeof stored?.name === "string" && stored.name.trim()
+        ? stored.name.slice(0, 30)
+        : "Mi tono",
+    personality:
+      typeof stored?.personality === "string"
+        ? stored.personality.slice(0, 600)
+        : "",
+  };
+}
+
 export default function Taskpane() {
   useOfficeTheme();
 
   const {
     draftText,
     quotedText,
+    signatureHtml,
+    subject,
     isReply,
     isReady,
     error,
@@ -57,7 +96,12 @@ export default function Taskpane() {
     copyText,
   } = useOfficeEmail();
 
-  const [selectedTone, setSelectedTone] = useState("profesional");
+  const [selectedTone, setSelectedTone] = useState(() => {
+    const stored = readLocalPreference(DEFAULT_TONE_KEY, "profesional");
+    return stored === "custom" || BUILT_IN_TONES.has(stored) ? stored : "profesional";
+  });
+  const [customTone, setCustomTone] = useState(readCustomTonePreference);
+  const [customToneOpen, setCustomToneOpen] = useState(false);
   const [improvedText, setImprovedText] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshingOutlook, setRefreshingOutlook] = useState(false);
@@ -81,6 +125,26 @@ export default function Taskpane() {
     () => plans.find((plan) => plan.id === "pro_monthly"),
     [plans]
   );
+  const isPro = usage.plan === "pro" && usage.status === "active";
+  const activeTone =
+    selectedTone === "custom" &&
+    usage.status !== "loading" &&
+    !isPro
+      ? "profesional"
+      : selectedTone;
+  const availableToneOptions = useMemo(
+    () => [
+      ...toneOptions,
+      {
+        value: "custom",
+        label: customTone.name || "Mi tono",
+        compactLabel: customTone.name || "Mi tono",
+        icon: WandSparkles,
+        locked: !isPro,
+      },
+    ],
+    [customTone.name, isPro]
+  );
 
   const canRun = useMemo(
     () => isMeaningfulText(draftText) || (isReply && isMeaningfulText(quotedText)),
@@ -93,7 +157,7 @@ export default function Taskpane() {
       return {
         mode: isReply ? "rewrite_draft" : "compose_email",
         text: draftText,
-        context: undefined,
+        context: isReply ? undefined : subject || undefined,
       };
     }
 
@@ -106,7 +170,7 @@ export default function Taskpane() {
     }
 
     return null;
-  }, [draftText, isReply, quotedText]);
+  }, [draftText, isReply, quotedText, subject]);
 
   const compactOutlookStatus = useMemo(() => {
     if (isMeaningfulText(draftText)) {
@@ -150,11 +214,13 @@ export default function Taskpane() {
       const variation = regenerate ? variationRef.current + 1 : 0;
       const data = await rewriteEmail({
         text: payload.text,
-        tone: selectedTone,
+        tone: activeTone,
         user: userProfile,
         mode: payload.mode,
         context: payload.context,
         variation,
+        customTone: activeTone === "custom" ? customTone.personality : undefined,
+        hasSignature: Boolean(signatureHtml),
       });
 
       setImprovedText(data.improvedText || "");
@@ -173,7 +239,7 @@ export default function Taskpane() {
     } finally {
       setLoading(false);
     }
-  }, [getRewritePayload, selectedTone, userProfile]);
+  }, [activeTone, customTone.personality, getRewritePayload, signatureHtml, userProfile]);
 
   const handleRegenerate = useCallback(() => {
     handleRewrite({ regenerate: true });
@@ -249,14 +315,20 @@ export default function Taskpane() {
   }, [refreshUsage]);
 
   useEffect(() => {
-    if (!isReady || !canRun || loading || improvedText.trim()) return;
+    if (
+      !isReady ||
+      !canRun ||
+      loading ||
+      improvedText.trim() ||
+      (activeTone === "custom" && (!isPro || !customTone.personality.trim()))
+    ) return;
 
     const autoRewriteKey = `${draftText}:${quotedText}`;
     if (autoRewriteTextRef.current === autoRewriteKey) return;
 
     autoRewriteTextRef.current = autoRewriteKey;
     handleRewrite();
-  }, [canRun, draftText, handleRewrite, improvedText, isReady, loading, quotedText]);
+  }, [activeTone, canRun, customTone.personality, draftText, handleRewrite, improvedText, isPro, isReady, loading, quotedText]);
 
   const handleReplace = async () => {
     try {
@@ -303,9 +375,29 @@ export default function Taskpane() {
   };
 
   const handleToneChange = (tone) => {
+    if (tone === "custom") {
+      if (!isPro) {
+        setInfoMessage("Mi tono esta disponible con BetterMail Pro.");
+        return;
+      }
+      if (!customTone.personality.trim()) {
+        setCustomToneOpen(true);
+        return;
+      }
+    }
+
     setSelectedTone(tone);
-    setImprovedText("");
-    autoRewriteTextRef.current = `${draftText}:${quotedText}`;
+    saveLocalPreference(DEFAULT_TONE_KEY, tone);
+    setInfoMessage("");
+  };
+
+  const handleSaveCustomTone = (value) => {
+    setCustomTone(value);
+    saveLocalPreference(CUSTOM_TONE_KEY, value);
+    setSelectedTone("custom");
+    saveLocalPreference(DEFAULT_TONE_KEY, "custom");
+    setCustomToneOpen(false);
+    setInfoMessage("");
   };
 
   const handleUpgrade = async () => {
@@ -350,10 +442,19 @@ export default function Taskpane() {
         )}
 
         <TonePills
-          options={toneOptions}
-          value={selectedTone}
+          options={availableToneOptions}
+          value={activeTone}
           onChange={handleToneChange}
+          onConfigureCustom={activeTone === "custom" && isPro ? () => setCustomToneOpen(true) : undefined}
         />
+
+        {customToneOpen && (
+          <CustomToneDialog
+            initialValue={customTone}
+            onClose={() => setCustomToneOpen(false)}
+            onSave={handleSaveCustomTone}
+          />
+        )}
 
         <EmailCard
           title="Mejorado"

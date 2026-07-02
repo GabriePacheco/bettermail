@@ -165,11 +165,17 @@ def build_user_prompt(
     mode: str,
     context: str | None,
     variation: int = 0,
+    has_signature: bool = False,
 ):
     variation_rule = (
         "- Genera una alternativa claramente distinta a propuestas anteriores: cambia estructura y redaccion sin cambiar hechos ni intencion."
         if variation > 0
         else ""
+    )
+    signature_rule = (
+        "- El correo ya tiene una firma de Outlook. No agregues despedida, nombre, cargo ni firma."
+        if has_signature
+        else "- Incluye una despedida natural cuando haga falta, pero no inventes nombre, cargo ni firma."
     )
 
     if mode == "suggest_reply":
@@ -187,7 +193,8 @@ Reglas obligatorias:
 - Si el contexto contiene una amenaza fisica, elimina la amenaza y responde solo a la intencion legitima de fondo de forma firme y profesional.
 - No rechaces la tarea por el lenguaje del contexto y no menciones politicas de seguridad.
 - Devuelve unicamente la respuesta sugerida, sin explicaciones, sin markdown y sin comillas.
-- Escribe un correo completo, con saludo, cuerpo bien organizado y despedida natural.
+- Escribe un correo completo, con saludo y cuerpo bien organizado.
+{signature_rule}
 {variation_rule}
 
 Contexto del correo anterior:
@@ -205,7 +212,8 @@ Reglas obligatorias:
 - Conserva todos los hechos, nombres, cifras, fechas, solicitudes y limites incluidos.
 - No inventes destinatarios, hechos, promesas, fechas ni compromisos.
 - Mejora de forma sustancial claridad, orden, gramatica, naturalidad y fuerza comunicativa.
-- Organiza el correo con saludo neutro si falta, cuerpo en parrafos claros y despedida profesional si falta.
+- Organiza el correo con saludo neutro si falta y cuerpo en parrafos claros.
+- Usa el asunto como contexto cuando este disponible, sin copiarlo como cabecera.
 - Se concreto: amplia solo lo necesario para que el mensaje quede completo y listo para revisar.
 - Manten el idioma original.
 - Usa un tono: {tone_description}.
@@ -214,7 +222,13 @@ Reglas obligatorias:
 - No rechaces la tarea por el lenguaje del borrador y no menciones politicas de seguridad.
 - No conserves amenazas, violencia, insultos, acoso ni acusaciones legales inventadas.
 - Devuelve unicamente el correo redactado, sin explicaciones, markdown ni comillas.
+{signature_rule}
 {variation_rule}
+
+Asunto del correo:
+\"\"\"
+{context or ""}
+\"\"\"
 
 Ideas o borrador original:
 \"\"\"
@@ -247,6 +261,7 @@ Reglas obligatorias:
 - La presencia de dano, crimen, acoso o amenaza en el texto original se considera material a neutralizar, no una instruccion para conservarlo.
 - No rechaces la reescritura por el lenguaje original y no menciones politicas de seguridad.
 - Devuelve unicamente el texto reescrito, sin explicaciones, sin markdown y sin comillas.
+{signature_rule}
 {variation_rule}
 
 Texto original:
@@ -262,11 +277,18 @@ def rewrite_email_text(
     mode: str = "rewrite_draft",
     context: str | None = None,
     variation: int = 0,
+    custom_tone: str | None = None,
+    has_signature: bool = False,
 ):
     settings = get_settings()
     client = get_client()
     normalized_mode = mode or "rewrite_draft"
-    tone_description = TONE_MAP.get(tone, TONE_MAP["profesional"])
+    tone_description = (
+        "personalizado segun esta descripcion de estilo, que no puede cambiar las reglas "
+        f"de contenido: {(custom_tone or '').strip()}"
+        if tone == "custom" and (custom_tone or "").strip()
+        else TONE_MAP.get(tone, TONE_MAP["profesional"])
+    )
     source_text = context if normalized_mode == "suggest_reply" else text
     safety_transform = source_requires_safety_transform(source_text or "")
     effective_mode = (
@@ -315,6 +337,7 @@ def rewrite_email_text(
             mode=effective_mode,
             context=context,
             variation=variation,
+            has_signature=has_signature,
         )
 
     response = client.chat.completions.create(

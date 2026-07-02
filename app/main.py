@@ -379,12 +379,35 @@ def rewrite(request: Request, payload: RewriteRequest):
             "rewritten_text": None,
         }
 
+    if payload.tone == "custom" and (
+        usage["plan"] != "pro"
+        or usage["status"] != "active"
+        or not (payload.custom_tone or "").strip()
+    ):
+        return {
+            "allowed": False,
+            "status": "pro_required",
+            "plan": usage["plan"],
+            "used": usage["used"],
+            "limit": usage["limit"],
+            "remaining": usage["remaining"],
+            "trial_limit": usage["trial_limit"],
+            "trial_used": usage["trial_used"],
+            "monthlyLimit": usage["monthlyLimit"],
+            "monthlyUsed": usage["monthlyUsed"],
+            "upgradeRequired": usage["plan"] != "pro",
+            "message": "Mi tono esta disponible con un plan Pro activo.",
+            "rewritten_text": None,
+        }
+
     rewrite_result = rewrite_email_text(
         text=payload.text,
         tone=payload.tone,
         mode=payload.mode,
         context=payload.context,
         variation=payload.variation,
+        custom_tone=payload.custom_tone,
+        has_signature=payload.has_signature,
     )
 
     usage_after = consume_rewrite_credit(

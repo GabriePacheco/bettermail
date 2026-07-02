@@ -10,7 +10,8 @@ Tone = Literal[
     "directo",
     "diplomatico",
     "institucional",
-    "reclamo_formal"
+    "reclamo_formal",
+    "custom",
 ]
 
 
@@ -29,6 +30,8 @@ class RewriteRequest(BaseModel):
     mode: str = "rewrite_draft"
     context: Optional[str] = None
     variation: int = Field(default=0, ge=0, le=20)
+    custom_tone: Optional[str] = Field(default=None, max_length=600)
+    has_signature: bool = False
 
 
 class RewriteResponse(BaseModel):

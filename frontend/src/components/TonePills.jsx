@@ -1,10 +1,11 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole, Settings2 } from "lucide-react";
 import { useRef } from "react";
 
 export default function TonePills({
   options,
   value,
   onChange,
+  onConfigureCustom,
 }) {
   const listRef = useRef(null);
 
@@ -18,7 +19,18 @@ export default function TonePills({
   return (
     <section className="tone-card bm-card">
       <div className="tone-card-header">
-        <h2 className="tone-card-title">Tono</h2>
+        <h2 className="tone-card-title">Tono predeterminado</h2>
+        {value === "custom" && onConfigureCustom && (
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onConfigureCustom}
+            title="Editar mi tono"
+            aria-label="Editar mi tono"
+          >
+            <Settings2 size={15} />
+          </button>
+        )}
       </div>
 
       <div className="tone-scroll-wrap">
@@ -42,9 +54,10 @@ export default function TonePills({
                 type="button"
                 onClick={() => onChange(item.value)}
                 className={`tone-button ${active ? "active" : ""}`}
+                title={item.locked ? "Disponible con BetterMail Pro" : item.label}
               >
                 <div className="tone-button-icon">
-                  <Icon size={18} />
+                  {item.locked ? <LockKeyhole size={16} /> : <Icon size={18} />}
                 </div>
                 <span className="tone-button-label tone-label-compact">
                   {item.compactLabel || item.label}

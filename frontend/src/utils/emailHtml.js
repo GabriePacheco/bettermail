@@ -36,6 +36,18 @@ const SIGNATURE_MARKERS = [
   "cordialmente,",
 ];
 
+const SIGNATURE_SELECTOR = [
+  "#Signature",
+  "._MailAutoSig",
+  ".ms-outlook-signature",
+  "[data-outlook-signature]",
+  "[data-signature]",
+  "[id*='signature' i]",
+  "[class*='signature' i]",
+  "[id*='autosig' i]",
+  "[class*='autosig' i]",
+].join(",");
+
 const QUOTE_SELECTOR = [
   "blockquote",
   ".gmail_quote",
@@ -237,6 +249,23 @@ function findSignatureStartIndex(nodes) {
 function splitSignatureHtml(draftHtml) {
   const doc = createDocument(draftHtml);
   const nodes = Array.from(doc.body.childNodes);
+  const signatureElement = doc.body.querySelector(SIGNATURE_SELECTOR);
+
+  if (signatureElement) {
+    const draftRange = doc.createRange();
+    draftRange.setStart(doc.body, 0);
+    draftRange.setEndBefore(signatureElement);
+
+    const signatureRange = doc.createRange();
+    signatureRange.setStartBefore(signatureElement);
+    signatureRange.setEnd(doc.body, doc.body.childNodes.length);
+
+    return {
+      draftHtml: serializeFragment(draftRange.cloneContents()),
+      signatureHtml: serializeFragment(signatureRange.cloneContents()),
+    };
+  }
+
   const signatureStartIndex = findSignatureStartIndex(nodes);
 
   if (signatureStartIndex < 0) {
@@ -309,6 +338,15 @@ function assertQuotedHtmlPreserved(finalHtml, quotedHtml) {
   }
 }
 
+function assertSignatureHtmlPreserved(finalHtml, signatureHtml) {
+  if (!signatureHtml) return;
+
+  const fragment = getSafeQuotedFragment(signatureHtml);
+  if (fragment && !finalHtml.replace(/\s+/g, " ").includes(fragment)) {
+    throw new Error("Riesgo de borrar la firma. Reemplazo cancelado.");
+  }
+}
+
 function buildQuoteSeparator(baseHtml = "") {
   const style = getBaseStyleAttribute(baseHtml);
   return `<div${style}><br></div><div${style}><br></div>`;
@@ -341,6 +379,7 @@ export function buildFinalHtmlAfterReplace({
   );
 
   assertQuotedHtmlPreserved(finalHtml, quotedHtml);
+  assertSignatureHtmlPreserved(finalHtml, signatureHtml);
   return finalHtml;
 }
 
@@ -358,6 +397,7 @@ export function buildFinalHtmlAfterInsertBelow({
   );
 
   assertQuotedHtmlPreserved(finalHtml, quotedHtml);
+  assertSignatureHtmlPreserved(finalHtml, signatureHtml);
   return finalHtml;
 }
 

@@ -290,8 +290,12 @@ export function useOfficeEmail() {
 
   const replaceDraftWithText = useCallback(
     async (improvedText, mode = "rewrite_draft") => {
-      if (mode === "suggest_reply" && !emailState.hasDraft && emailState.quotedHtml) {
-        const replyHtml = `${plainTextToOutlookHtml(improvedText, emailState.fullHtml)}<div><br></div><div><br></div>`;
+      const latestState = isPreviewMode
+        ? emailState
+        : getEmailStateFromHtml(await readBodyHtml());
+
+      if (mode === "suggest_reply" && !latestState.hasDraft && latestState.quotedHtml) {
+        const replyHtml = `${plainTextToOutlookHtml(improvedText, latestState.fullHtml)}<div><br></div><div><br></div>`;
 
         if (!isPreviewMode) {
           await prependBodyHtml(replyHtml);
@@ -299,51 +303,45 @@ export function useOfficeEmail() {
           return;
         }
 
-        setEmailState(getEmailStateFromHtml(`${replyHtml}${emailState.fullHtml || ""}`));
+        setEmailState(getEmailStateFromHtml(`${replyHtml}${latestState.fullHtml || ""}`));
         return;
       }
 
       const finalHtml = buildFinalHtmlAfterReplace({
         improvedText,
-        draftHtml: emailState.draftHtml,
-        signatureHtml: emailState.signatureHtml,
-        quotedHtml: emailState.quotedHtml,
+        draftHtml: latestState.draftHtml,
+        signatureHtml: latestState.signatureHtml,
+        quotedHtml: latestState.quotedHtml,
       });
 
       await commitHtml(finalHtml);
     },
-    [
-      commitHtml,
-      emailState.draftHtml,
-      emailState.fullHtml,
-      emailState.hasDraft,
-      emailState.quotedHtml,
-      emailState.signatureHtml,
-      isPreviewMode,
-      refreshEmail,
-    ]
+    [commitHtml, emailState, isPreviewMode, refreshEmail]
   );
 
   const insertBelowDraftText = useCallback(
     async (improvedText, mode = "rewrite_draft") => {
+      const latestState = isPreviewMode
+        ? emailState
+        : getEmailStateFromHtml(await readBodyHtml());
       const finalHtml =
         mode === "suggest_reply"
           ? buildFinalHtmlAfterReplace({
               improvedText,
-              draftHtml: emailState.draftHtml,
-              signatureHtml: emailState.signatureHtml,
-              quotedHtml: emailState.quotedHtml,
+              draftHtml: latestState.draftHtml,
+              signatureHtml: latestState.signatureHtml,
+              quotedHtml: latestState.quotedHtml,
             })
           : buildFinalHtmlAfterInsertBelow({
               improvedText,
-              draftHtml: emailState.draftHtml,
-              signatureHtml: emailState.signatureHtml,
-              quotedHtml: emailState.quotedHtml,
+              draftHtml: latestState.draftHtml,
+              signatureHtml: latestState.signatureHtml,
+              quotedHtml: latestState.quotedHtml,
             });
 
       await commitHtml(finalHtml);
     },
-    [commitHtml, emailState.draftHtml, emailState.quotedHtml, emailState.signatureHtml]
+    [commitHtml, emailState, isPreviewMode]
   );
 
   const applyImprovedText = useCallback(

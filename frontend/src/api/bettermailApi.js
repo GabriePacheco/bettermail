@@ -299,6 +299,8 @@ export async function rewriteEmail({
   mode = "rewrite_draft",
   context,
   variation = 0,
+  customTone,
+  hasSignature = false,
 }) {
   const apiBaseUrl = requireApiBaseUrl();
   let response;
@@ -315,6 +317,8 @@ export async function rewriteEmail({
         mode,
         context,
         variation,
+        custom_tone: customTone || null,
+        has_signature: hasSignature,
       }),
     });
   } catch {

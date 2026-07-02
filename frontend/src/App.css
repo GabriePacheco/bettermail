@@ -56,7 +56,8 @@ body {
 }
 
 button,
-textarea {
+textarea,
+input {
   font: inherit;
 }
 
@@ -357,6 +358,86 @@ button {
 .tone-scroll-button:hover {
   background: var(--bm-bg-card);
   color: var(--bm-accent);
+}
+
+.tone-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 24, 39, 0.46);
+  padding: 12px;
+}
+
+.tone-dialog {
+  width: min(100%, 360px);
+  padding: 12px;
+}
+
+.tone-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tone-dialog-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.tone-dialog-form {
+  display: grid;
+  gap: 7px;
+}
+
+.tone-dialog-form label {
+  color: var(--bm-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tone-dialog-form input,
+.tone-dialog-form textarea {
+  width: 100%;
+  border: 1px solid var(--bm-border);
+  border-radius: 6px;
+  outline: 0;
+  background: var(--bm-bg-input);
+  color: var(--bm-text-primary);
+  padding: 8px;
+}
+
+.tone-dialog-form input:focus,
+.tone-dialog-form textarea:focus {
+  border-color: var(--bm-accent);
+  box-shadow: var(--bm-ring);
+}
+
+.tone-dialog-form textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.tone-dialog-save {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--bm-accent);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tone-dialog-save:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .spin-icon {

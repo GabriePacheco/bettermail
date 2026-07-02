@@ -60,6 +60,38 @@ class OpenAICostTests(unittest.TestCase):
         self.assertIn("borrador de ideas", prompt)
         self.assertIn("saludo neutro", prompt)
 
+    def test_compose_mode_uses_subject_and_preserves_outlook_signature(self):
+        prompt = build_user_prompt(
+            text="confirma la reunion del jueves",
+            tone_description="profesional y claro",
+            mode="compose_email",
+            context="Reunion trimestral",
+            has_signature=True,
+        )
+
+        self.assertIn("Reunion trimestral", prompt)
+        self.assertIn("ya tiene una firma de Outlook", prompt)
+        self.assertIn("No agregues despedida", prompt)
+
+    def test_reply_and_compose_prompts_share_completion_rules(self):
+        reply_prompt = build_user_prompt(
+            text="",
+            tone_description="profesional",
+            mode="suggest_reply",
+            context="Puedes enviar el informe hoy?",
+        )
+        compose_prompt = build_user_prompt(
+            text="enviar el informe hoy",
+            tone_description="profesional",
+            mode="compose_email",
+            context="Informe semanal",
+        )
+
+        for prompt in (reply_prompt, compose_prompt):
+            self.assertIn("correo completo", prompt)
+            self.assertIn("No inventes", prompt)
+            self.assertIn("tono: profesional", prompt)
+
     def test_regeneration_requests_a_distinct_alternative(self):
         prompt = build_user_prompt(
             text="necesito el informe",
