@@ -41,6 +41,7 @@ Use this file when filling the Microsoft Partner Center offer.
 - Long description: `marketplace/app-description-long.md`
 - Keywords: `marketplace/keywords.md`
 - Certification notes: `marketplace/test-notes.md`
+- Paste the current certification key from Secret Manager into Partner Center only; never commit it to this repository.
 
 ## Recommended Screenshots
 

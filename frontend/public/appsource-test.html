@@ -1,15 +1,42 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AppSource Test Notes | BetterMail AI</title>
+    <title>Certification Access | BetterMail AI</title>
     <style>
-      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #172033; background: #f7f8fb; line-height: 1.6; }
-      main { max-width: 880px; margin: 0 auto; padding: 48px 20px 72px; }
-      a { color: #1d4ed8; } h1 { font-size: 38px; line-height: 1.1; } h2 { margin-top: 34px; }
-      .card { background: #fff; border: 1px solid #e3e7ef; border-radius: 8px; padding: 28px; }
-      nav { margin-bottom: 24px; display: flex; gap: 18px; flex-wrap: wrap; }
+      :root { font-family: "Segoe UI", Arial, sans-serif; color: #172033; background: #f6f8fb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: #f6f8fb; line-height: 1.55; }
+      a { color: #155eef; }
+      main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 64px; }
+      nav { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 28px; font-size: 13px; }
+      h1 { margin: 0; color: #101828; font-size: 36px; line-height: 1.12; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 21px; }
+      p { margin: 8px 0; }
+      .lead { max-width: 700px; margin: 14px 0 0; color: #475467; font-size: 16px; }
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; margin-top: 30px; }
+      .panel { border: 1px solid #dce3ec; border-radius: 8px; background: #fff; padding: 24px; }
+      .steps { margin: 0; padding-left: 22px; }
+      .steps li + li { margin-top: 10px; }
+      .activation-form { display: grid; gap: 9px; }
+      label { margin-top: 4px; color: #344054; font-size: 12px; font-weight: 700; }
+      input { width: 100%; min-height: 42px; border: 1px solid #cfd6e2; border-radius: 6px; background: #fff; color: #101828; padding: 8px 10px; font: inherit; }
+      input:focus { border-color: #155eef; outline: 2px solid rgba(21, 94, 239, .14); }
+      button { min-height: 42px; margin-top: 8px; border: 0; border-radius: 6px; background: #155eef; color: #fff; padding: 0 16px; font: inherit; font-weight: 700; cursor: pointer; }
+      button:disabled { cursor: wait; opacity: .65; }
+      .status { display: none; margin-top: 12px; border-left: 3px solid #155eef; background: #eef4ff; padding: 11px 12px; color: #344054; font-size: 13px; }
+      .status.visible { display: block; }
+      .status.error { border-color: #d92d20; background: #fef3f2; color: #912018; }
+      .note { margin-top: 22px; border-top: 1px solid #e4e7ec; padding-top: 18px; color: #667085; font-size: 13px; }
+      .test-cases { margin-top: 24px; }
+      .test-cases code { color: #344054; }
+      @media (max-width: 760px) {
+        main { padding-top: 24px; }
+        h1 { font-size: 30px; }
+        .layout { grid-template-columns: 1fr; }
+        .panel { padding: 20px; }
+      }
     </style>
   </head>
   <body>
@@ -20,21 +47,97 @@
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
       </nav>
-      <section class="card">
-        <h1>AppSource Test Notes / Notas de prueba</h1>
-        <ol>
-          <li>Install BetterMail AI in Outlook on the web.</li>
-          <li>Open a new compose window and launch the add-in.</li>
-          <li>Write a draft and select a tone such as Professional or Firm.</li>
-          <li>Confirm the generated text can be replaced, inserted below, copied and regenerated.</li>
-          <li>Open an existing email reply with an empty draft to test suggested replies from context.</li>
-          <li>Test aggressive non-physical wording such as "Respondeme ya o voy a escalar esto" and confirm BetterMail AI produces a firm professional version.</li>
-          <li>Use trial until the limit is reached, then confirm the Pro call to action opens pricing.</li>
-          <li>Use PayPhone sandbox data if provided by the publisher.</li>
-        </ol>
-        <p>BetterMail AI does not send emails automatically. The user controls whether suggested text is applied.</p>
-        <p>Support contact: <a href="mailto:gabriel.pacheco.developer@gmail.com">gabriel.pacheco.developer@gmail.com</a></p>
-      </section>
+
+      <header>
+        <h1>BetterMail AI certification access</h1>
+        <p class="lead">Test the Outlook add-in without creating a BetterMail account. The add-in uses the Outlook profile supplied by Office.js.</p>
+      </header>
+
+      <div class="layout">
+        <section class="panel" aria-labelledby="steps-title">
+          <h2 id="steps-title">Certification steps</h2>
+          <ol class="steps">
+            <li>Install the submitted manifest in Outlook on the web or Outlook desktop.</li>
+            <li>Open a new message, type <code>Necesito que me envies el reporte hoy.</code>, and launch BetterMail AI.</li>
+            <li>Confirm a complete professional email is generated. Change the tone and verify the current suggestion remains visible.</li>
+            <li>Use Replace and confirm the Outlook signature remains intact. Also test Insert below, Copy, and Regenerate.</li>
+            <li>Reply to an existing email with an empty draft and confirm BetterMail AI suggests a response using the quoted context.</li>
+            <li>Activate temporary Pro access with the form on this page, then reopen the taskpane.</li>
+            <li>Select <strong>My tone / Mi tono</strong>, create a custom personality, and generate another suggestion.</li>
+          </ol>
+
+          <div class="test-cases">
+            <h2>Expected behavior</h2>
+            <p>BetterMail AI never sends an email automatically. The reviewer always chooses whether to replace, insert, or copy generated text.</p>
+            <p>Temporary certification access lasts seven days, does not charge a payment method, and does not renew automatically.</p>
+          </div>
+        </section>
+
+        <aside class="panel" aria-labelledby="activation-title">
+          <h2 id="activation-title">Activate temporary Pro</h2>
+          <p>Use the same email address as the Outlook account running the add-in.</p>
+
+          <form id="certification-form" class="activation-form">
+            <label for="review-email">Outlook email</label>
+            <input id="review-email" name="email" type="email" autocomplete="email" required maxlength="254" />
+
+            <label for="license-key">Certification license key</label>
+            <input id="license-key" name="licenseKey" type="password" autocomplete="off" required minlength="8" maxlength="200" />
+
+            <button id="activate-button" type="submit">Activate Pro access</button>
+          </form>
+
+          <div id="activation-status" class="status" role="status" aria-live="polite"></div>
+
+          <p class="note">No BetterMail login is required. For assistance, contact <a href="mailto:gabriel.pacheco.developer@gmail.com">gabriel.pacheco.developer@gmail.com</a>.</p>
+        </aside>
+      </div>
     </main>
+
+    <script>
+      const API_URL = "https://bettermail-api-202646537583.us-central1.run.app";
+      const form = document.getElementById("certification-form");
+      const button = document.getElementById("activate-button");
+      const statusBox = document.getElementById("activation-status");
+
+      function showStatus(message, isError = false) {
+        statusBox.textContent = message;
+        statusBox.className = `status visible${isError ? " error" : ""}`;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        button.textContent = "Activating...";
+        showStatus("Validating certification access...");
+
+        const data = new FormData(form);
+        try {
+          const response = await fetch(`${API_URL}/certification/activate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: String(data.get("email") || "").trim(),
+              license_key: String(data.get("licenseKey") || "").trim(),
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.detail || "Certification access could not be activated.");
+          }
+
+          const validUntil = payload.valid_until
+            ? new Date(payload.valid_until).toLocaleString()
+            : "the displayed subscription period";
+          showStatus(`Pro access is active until ${validUntil}. Close and reopen BetterMail AI in Outlook.`);
+          document.getElementById("license-key").value = "";
+        } catch (error) {
+          showStatus(error.message || "Certification access could not be activated.", true);
+        } finally {
+          button.disabled = false;
+          button.textContent = "Activate Pro access";
+        }
+      });
+    </script>
   </body>
 </html>

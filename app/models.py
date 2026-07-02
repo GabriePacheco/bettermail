@@ -109,6 +109,19 @@ class ManualActivateRequest(BaseModel):
     plan_id: str
 
 
+class CertificationActivateRequest(BaseModel):
+    email: EmailStr
+    license_key: str = Field(min_length=8, max_length=200)
+
+
+class CertificationActivateResponse(BaseModel):
+    activated: bool
+    plan: str
+    status: str
+    valid_until: Optional[str] = None
+    message: str
+
+
 class PayphoneConfirmRequest(BaseModel):
     id: int
     client_transaction_id: str

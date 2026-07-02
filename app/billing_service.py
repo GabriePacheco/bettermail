@@ -217,6 +217,7 @@ def _activate_subscription(
     provider_subscription_id: str | None = None,
     event_name: str,
     auto_renew: bool = False,
+    period_days: int = 30,
 ):
     plan = _require_plan(plan_id)
     user = OfficeUser(email=email)
@@ -224,7 +225,7 @@ def _activate_subscription(
     db = get_db()
 
     now = _now_utc()
-    period_end = now + timedelta(days=30)
+    period_end = now + timedelta(days=max(1, min(period_days, 30)))
     email_normalized = normalize_email(email)
     email_hash = hash_email(email_normalized)
 
@@ -320,6 +321,23 @@ def activate_manual_subscription(email: str, plan_id: str, trial_limit: int):
         trial_limit=trial_limit,
         provider="manual",
         event_name="manual_subscription_activated",
+    )
+
+
+def activate_certification_subscription(
+    email: str,
+    plan_id: str,
+    trial_limit: int,
+    period_days: int,
+):
+    return _activate_subscription(
+        email=email,
+        plan_id=plan_id,
+        trial_limit=trial_limit,
+        provider="certification",
+        event_name="certification_subscription_activated",
+        auto_renew=False,
+        period_days=period_days,
     )
 
 

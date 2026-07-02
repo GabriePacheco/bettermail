@@ -15,6 +15,8 @@ from app.models import (
     AdminUserResponse,
     BillingStatusRequest,
     BillingStatusResponse,
+    CertificationActivateRequest,
+    CertificationActivateResponse,
     CheckoutDetailsResponse,
     CheckoutRequest,
     CheckoutResponse,
@@ -38,6 +40,7 @@ from app.admin_service import (
     unblock_user,
 )
 from app.cost_service import get_openai_cost_summary
+from app.certification_service import activate_certification_access
 from app.security import verify_admin_secret, verify_app_secret, verify_internal_job_secret
 from app.usage_service import check_usage_allowed, consume_rewrite_credit
 from app.openai_service import rewrite_email_text
@@ -130,6 +133,19 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "BetterMail AI API"}
+
+
+@app.post(
+    "/certification/activate",
+    response_model=CertificationActivateResponse,
+)
+@limiter.limit("5/minute")
+def certification_activate(request: Request, payload: CertificationActivateRequest):
+    return activate_certification_access(
+        email=str(payload.email),
+        license_key=payload.license_key,
+        trial_limit=settings.trial_limit,
+    )
 
 
 @app.get(

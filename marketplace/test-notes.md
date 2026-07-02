@@ -14,6 +14,16 @@
 
 BetterMail AI does not require an initial login. It uses the Outlook user profile provided by Office.js.
 
+## Temporary Pro Certification Access
+
+- Activation page: https://bettermailai.web.app/appsource-test
+- Use the same email address as the Outlook account running the add-in.
+- Certification license key: `[PASTE THE CURRENT PARTNER CENTER CERTIFICATION KEY]`
+- Access duration: 7 days.
+- The certification entitlement does not charge a card and does not renew automatically.
+- Close and reopen the BetterMail AI taskpane after activation.
+- The certification key is separate from all administrative credentials and may be rotated after review.
+
 ## Suggested Certification Steps
 
 1. Install the manifest in Outlook on the web.
@@ -22,18 +32,22 @@ BetterMail AI does not require an initial login. It uses the Outlook user profil
 4. Type a draft such as: `Necesito que me envies el reporte hoy.`
 5. Confirm BetterMail AI generates a clearer professional version.
 6. Use Replace, Insert below, Copy, and Regenerate.
-7. Open a reply with an empty draft and confirm the add-in can suggest a response from the previous email context.
-8. Test a difficult non-physical aggressive draft such as: `Respondeme ya o voy a escalar esto.`
-9. Confirm the result is firm, professional, and does not preserve threats or insults.
-10. Use the trial until exhausted and confirm the Pro call to action opens https://bettermailai.web.app/pricing.
-11. Click Continue on the Pro plan and confirm the PayPhone payment box loads.
-12. After approving a PayPhone transaction, confirm the page returns to `/pricing` and BetterMail Pro becomes active for the Outlook account.
+7. Change the selected tone and confirm the current generated suggestion remains visible.
+8. Use Replace on a draft with an Outlook signature and confirm the signature remains intact.
+9. Open a reply with an empty draft and confirm the add-in can suggest a response from the previous email context.
+10. Activate temporary Pro using the certification page and license above.
+11. Reopen the taskpane, select `My tone / Mi tono`, define a custom personality, and generate a suggestion.
+12. Confirm the selected tone remains the default after the taskpane is reopened.
+13. Test a difficult non-physical aggressive draft such as: `Respondeme ya o voy a escalar esto.`
+14. Confirm the result is firm, professional, and does not preserve threats or insults.
 
 ## Payment Notes
 
 BetterMail Pro checkout uses PayPhone Cajita. The allowed PayPhone web domain is `https://bettermailai.web.app` and the response URL is `https://bettermailai.web.app/pricing`.
 
 Sandbox card data must be provided separately by the publisher if PayPhone sandbox testing is required.
+
+Temporary Pro certification access is the supplied license-key path for reviewing paid features without executing a real payment.
 
 ## Production API Notes
 

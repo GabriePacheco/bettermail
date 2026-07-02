@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     payphone_recurring_enabled: bool = Field(False, alias="PAYPHONE_RECURRING_ENABLED")
     internal_job_secret: str = Field("", alias="INTERNAL_JOB_SECRET")
     admin_api_secret: str = Field("", alias="ADMIN_API_SECRET")
+    certification_access_enabled: bool = Field(
+        False, alias="CERTIFICATION_ACCESS_ENABLED"
+    )
+    certification_license_secret: str = Field(
+        "", alias="CERTIFICATION_LICENSE_SECRET"
+    )
+    certification_access_days: int = Field(
+        7, alias="CERTIFICATION_ACCESS_DAYS"
+    )
     billing_grace_days: int = Field(3, alias="BILLING_GRACE_DAYS")
     billing_max_renewal_attempts: int = Field(3, alias="BILLING_MAX_RENEWAL_ATTEMPTS")
 
